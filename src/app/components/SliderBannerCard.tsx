@@ -20,13 +20,7 @@ import {
   Autoplay,
 } from "swiper/modules";
 import { OphimHomeItem } from "../types/navType";
-import {
-  ArrowLeft,
-  ArrowRight,
-  ChevronLeft,
-  ChevronRight,
-  Play,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Play } from "lucide-react";
 import Link from "next/link";
 
 function SliderBannerCard({
