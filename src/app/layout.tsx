@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "./components/Navbar";
-import SearchModal from "./components/SearchModal";
+import Link from "next/link";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -41,7 +41,6 @@ export default function RootLayout({
         <Navbar />
 
         {/* Search Modal */}
-        <SearchModal />
 
         {/* Main Content */}
         <main className="pt-5">{children}</main>
@@ -70,33 +69,36 @@ export default function RootLayout({
                 </h4>
                 <ul className="space-y-2 text-gray-400">
                   <li>
-                    <a href="/" className="hover:text-white transition-colors">
+                    <Link
+                      href="/"
+                      className="hover:text-white transition-colors"
+                    >
                       Trang chủ
-                    </a>
+                    </Link>
                   </li>
                   <li>
-                    <a
+                    <Link
                       href="/favorites"
                       className="hover:text-white transition-colors"
                     >
                       Yêu thích
-                    </a>
+                    </Link>
                   </li>
                   <li>
-                    <a
+                    <Link
                       href="/about"
                       className="hover:text-white transition-colors"
                     >
                       Giới thiệu
-                    </a>
+                    </Link>
                   </li>
                   <li>
-                    <a
+                    <Link
                       href="/contact"
                       className="hover:text-white transition-colors"
                     >
                       Liên hệ
-                    </a>
+                    </Link>
                   </li>
                 </ul>
               </div>
@@ -107,36 +109,36 @@ export default function RootLayout({
                 </h4>
                 <ul className="space-y-2 text-gray-400">
                   <li>
-                    <a
+                    <Link
                       href="/genre/action"
                       className="hover:text-white transition-colors"
                     >
                       Hành động
-                    </a>
+                    </Link>
                   </li>
                   <li>
-                    <a
+                    <Link
                       href="/genre/comedy"
                       className="hover:text-white transition-colors"
                     >
                       Hài kịch
-                    </a>
+                    </Link>
                   </li>
                   <li>
-                    <a
+                    <Link
                       href="/genre/drama"
                       className="hover:text-white transition-colors"
                     >
                       Chính kịch
-                    </a>
+                    </Link>
                   </li>
                   <li>
-                    <a
+                    <Link
                       href="/genre/horror"
                       className="hover:text-white transition-colors"
                     >
                       Kinh dị
-                    </a>
+                    </Link>
                   </li>
                 </ul>
               </div>
