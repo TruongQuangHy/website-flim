@@ -1,33 +1,183 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎬 FilmHub - Website Khám Phá Phim
 
-## Getting Started
+Website khám phá thế giới điện ảnh được xây dựng với Next.js 14, Tailwind CSS và Zustand. Khám phá hàng ngàn bộ phim, xem trailer, đọc thông tin chi tiết và quản lý danh sách yêu thích của bạn.
 
-First, run the development server:
+## ✨ Tính năng
+
+- 🏠 **Trang chủ**: Hiển thị phim phổ biến, đánh giá cao và sắp ra mắt
+- 🎥 **Chi tiết phim**: Thông tin đầy đủ, trailer, diễn viên và phim tương tự
+- 🔍 **Tìm kiếm**: Tìm kiếm phim với bộ lọc theo năm, thể loại và sắp xếp
+- 💖 **Yêu thích**: Thêm/xóa phim khỏi danh sách yêu thích
+- 📱 **Responsive**: Thiết kế thân thiện với mobile
+- 🌙 **Dark Mode**: Giao diện tối hiện đại
+- ⚡ **Loading States**: Skeleton loading và animations mượt mà
+
+## 🛠️ Công nghệ sử dụng
+
+- **Frontend**: Next.js 14 (App Router), TypeScript
+- **Styling**: Tailwind CSS 4.0
+- **State Management**: Zustand với persistence
+- **API**: The Movie Database (TMDB) hoặc Mock Data
+- **HTTP Client**: Axios
+- **Images**: Next.js Image Optimization
+
+## 🚀 Cài đặt và chạy
+
+### 1. Clone repository
+
+```bash
+git clone <repository-url>
+cd film-website
+```
+
+### 2. Cài đặt dependencies
+
+```bash
+npm install
+# hoặc
+yarn install
+# hoặc
+pnpm install
+```
+
+### 3. Cấu hình môi trường (Tùy chọn)
+
+```bash
+cp .env.example .env.local
+```
+
+Thêm TMDB API key vào `.env.local`:
+
+```bash
+NEXT_PUBLIC_TMDB_API_KEY=your_api_key_here
+```
+
+> **Lưu ý**: Nếu không có API key, website sẽ tự động sử dụng mock data để demo.
+
+### 4. Chạy development server
 
 ```bash
 npm run dev
-# or
+# hoặc
 yarn dev
-# or
+# hoặc
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Mở [http://localhost:3000](http://localhost:3000) để xem website.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📁 Cấu trúc thư mục
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/app/
+├── components/          # Các React components
+│   ├── Navbar.tsx      # Navigation bar
+│   ├── MovieCard.tsx   # Card hiển thị phim
+│   ├── SearchBar.tsx   # Thanh tìm kiếm
+│   ├── SearchModal.tsx # Modal tìm kiếm mobile
+│   └── FavoriteButton.tsx # Nút yêu thích
+├── store/              # Zustand store
+│   └── useStore.ts     # State management
+├── lib/                # Utilities
+│   ├── api.ts          # API functions
+│   └── mockData.ts     # Mock data và utils
+├── movie/[id]/         # Trang chi tiết phim
+│   └── page.tsx
+├── favorites/          # Trang danh sách yêu thích
+│   └── page.tsx
+├── search/             # Trang tìm kiếm
+│   └── page.tsx
+├── layout.tsx          # Root layout
+├── page.tsx            # Trang chủ
+└── globals.css         # Global styles
+```
 
-## Learn More
+## 🎯 API và Data
 
-To learn more about Next.js, take a look at the following resources:
+### TMDB API
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Website hỗ trợ tích hợp với [The Movie Database API](https://www.themoviedb.org/). Để sử dụng:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Tạo tài khoản tại [TMDB](https://www.themoviedb.org/)
+2. Lấy API key từ [Settings > API](https://www.themoviedb.org/settings/api)
+3. Thêm vào file `.env.local`
+
+### Mock Data
+
+Nếu không có API key, website sử dụng mock data với:
+
+- 8 bộ phim mẫu với đầy đủ thông tin
+- Diễn viên, trailer và thông tin chi tiết
+- Tính năng tìm kiếm và lọc hoạt động đầy đủ
+
+## 🔧 Scripts
+
+```bash
+npm run dev          # Chạy development server
+npm run build        # Build production
+npm run start        # Chạy production server
+npm run lint         # Kiểm tra ESLint
+npm run type-check   # Kiểm tra TypeScript
+```
+
+## 📱 Responsive Design
+
+Website được thiết kế responsive cho:
+
+- 📱 Mobile: 320px+
+- 📱 Tablet: 768px+
+- 💻 Desktop: 1024px+
+- 🖥️ Large screens: 1280px+
+
+## 🎨 Features chi tiết
+
+### State Management (Zustand)
+
+- ✅ Quản lý danh sách yêu thích
+- ✅ Lưu trữ local storage
+- ✅ User preferences
+- ✅ Search filters và history
+- ✅ Dark mode toggle
+
+### UI/UX
+
+- ✅ Dark theme design
+- ✅ Smooth animations và transitions
+- ✅ Skeleton loading states
+- ✅ Hover effects
+- ✅ Mobile-first responsive design
+- ✅ Image optimization
+
+### Performance
+
+- ✅ Next.js App Router
+- ✅ Server-side rendering
+- ✅ Image optimization
+- ✅ Code splitting
+- ✅ Lazy loading
+
+## 🤝 Đóng góp
+
+1. Fork repository
+2. Tạo feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Tạo Pull Request
+
+## 📄 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+## 🙏 Credits
+
+- **Data**: [The Movie Database (TMDB)](https://www.themoviedb.org/)
+- **Icons**: Heroicons, SVG icons
+- **Fonts**: Inter (Google Fonts)
+- **Framework**: Next.js, React, Tailwind CSS
+
+---
+
+Made with ❤️ by [Your Name]
 
 ## Deploy on Vercel
 
