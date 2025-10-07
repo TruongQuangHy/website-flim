@@ -6,10 +6,17 @@ import { useStore } from "../store/useStore";
 
 interface ButtonHoverMenuCardProps {
   navItem: NavItem;
+  isMobile?: boolean;
+  onItemClick?: () => void;
 }
 
-function ButtonHoverMenuCard({ navItem }: ButtonHoverMenuCardProps) {
+function ButtonHoverMenuCard({
+  navItem,
+  isMobile = false,
+  onItemClick,
+}: ButtonHoverMenuCardProps) {
   const [isMounted, setIsMounted] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const {
     categories,
     setCategories,
@@ -100,6 +107,58 @@ function ButtonHoverMenuCard({ navItem }: ButtonHoverMenuCardProps) {
 
   const displayItems = getDisplayItems();
 
+  // Mobile version with accordion
+  if (isMobile) {
+    return (
+      <div className="border-b border-gray-700">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full flex items-center justify-between p-3 text-white hover:bg-gray-800 rounded transition-all duration-200"
+        >
+          <span className="font-medium">{navItem.name}</span>
+          <svg
+            className={`w-5 h-5 transform transition-transform duration-300 ${
+              isExpanded ? "rotate-180" : ""
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </button>
+
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            isExpanded ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          {isMounted && (
+            <div className="bg-gray-800/50 overflow-y-auto">
+              {displayItems.map((item, index) => (
+                <Link
+                  key={`${navItem.slug}-${item._id}`}
+                  href={`/${navItem.slug}/${item.slug}`}
+                  onClick={onItemClick}
+                  className="block px-6 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-150 animate-fadeInUp"
+                  style={{ animationDelay: `${index * 20}ms` }}
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop version with hover menu
   return (
     <div className="relative inline-block text-left group">
       <button className="hover:bg-[var(--color-gray-600)] p-2 rounded cursor-pointer duration-500 ease-in-out">

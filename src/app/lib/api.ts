@@ -16,6 +16,7 @@ import {
   OphimMovieItem,
   MoviePeoplesResponse,
   MoviePerson,
+  OphimSearchResponse,
 } from "../types/navType";
 
 // =======================
@@ -247,6 +248,62 @@ export class MovieAPI {
     } catch (error) {
       console.error(`Error fetching movie peoples for ${slug}:`, error);
       throw new Error(`Failed to fetch movie peoples from Ophim for ${slug}`);
+    }
+  }
+
+  // Search movies from Ophim API
+  static async searchMovies(
+    keyword: string,
+    page: number = 1,
+    saveToStore?: (searchData: {
+      items: OphimHomeItem[];
+      pagination: OphimPagination;
+      seoOnPage: OphimSeoOnPage;
+      titlePage: string;
+      keyword: string;
+      appDomains: OphimAppDomains;
+    }) => void
+  ): Promise<{
+    items: OphimHomeItem[];
+    pagination: OphimPagination;
+    seoOnPage: OphimSeoOnPage;
+    titlePage: string;
+    keyword: string;
+    appDomains: OphimAppDomains;
+  }> {
+    try {
+      const response = await ophimApi.get("/v1/api/tim-kiem", {
+        params: { keyword, page },
+      });
+      const responseData = response.data as OphimSearchResponse;
+
+      if (responseData.status === "success" && responseData.data?.items) {
+        const result = {
+          items: responseData.data.items,
+          pagination: responseData.data.params.pagination,
+          seoOnPage: responseData.data.seoOnPage,
+          titlePage: responseData.data.titlePage,
+          keyword: responseData.data.params.keyword,
+          appDomains: {
+            frontend: responseData.data.APP_DOMAIN_FRONTEND,
+            cdnImage: responseData.data.APP_DOMAIN_CDN_IMAGE,
+          },
+        };
+
+        // Save to store if callback provided
+        if (saveToStore) {
+          saveToStore(result);
+        }
+
+        return result;
+      } else {
+        throw new Error("Failed to search movies");
+      }
+    } catch (error) {
+      console.error(`Error searching movies with keyword "${keyword}":`, error);
+      throw new Error(
+        `Failed to search movies from Ophim with keyword "${keyword}"`
+      );
     }
   }
 }

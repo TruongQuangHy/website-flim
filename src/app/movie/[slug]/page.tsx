@@ -83,11 +83,11 @@ export default function MoviePage({ params }: MoviePageProps) {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 lg:py-8">
         {/* video player */}
         {currentVideo && (
           <div className="flex justify-center items-center w-full mb-8">
-            <VideoPlayerCard src={currentVideo} width="90%" height="450" />
+            <VideoPlayerCard src={currentVideo} width="100%" height="450" />
           </div>
         )}
 
@@ -95,7 +95,9 @@ export default function MoviePage({ params }: MoviePageProps) {
           <div className="md:col-span-2 flex flex-col gap-4">
             {/* Movie Info */}
             <div className="bg-black/60 flex flex-col gap-4 p-4 rounded-lg">
-              <h1 className="font-bold text-2xl">{movieDetails.name}</h1>
+              <h1 className="font-bold text-xl md:text-2xl">
+                {movieDetails.name}
+              </h1>
               <h2 className="font-bold text-lg text-gray-300">
                 {movieDetails.origin_name}
               </h2>

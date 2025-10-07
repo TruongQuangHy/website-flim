@@ -276,3 +276,33 @@ export interface MoviePeoplesResponse {
     peoples: MoviePerson[];
   };
 }
+
+export interface OphimSearchResponse {
+  status: string;
+  message: string;
+  data: {
+    seoOnPage: OphimSeoOnPage;
+    breadCrumb?: Array<{
+      name: string;
+      slug?: string;
+      isCurrent?: boolean;
+      position: number;
+    }>;
+    titlePage: string;
+    items: OphimHomeItem[];
+    params: {
+      type_slug: string;
+      keyword: string;
+      filterCategory?: string[];
+      filterCountry?: string[];
+      filterYear?: string;
+      filterType?: string;
+      sortField?: string;
+      sortType?: string;
+      pagination: OphimPagination;
+    };
+    type_list: string;
+    APP_DOMAIN_FRONTEND: string;
+    APP_DOMAIN_CDN_IMAGE: string;
+  };
+}

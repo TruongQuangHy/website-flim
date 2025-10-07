@@ -44,6 +44,66 @@ function VideoPlayerCard({
     }
   }, [src]);
 
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleFullscreenChange = async () => {
+      try {
+        // Check if entering fullscreen
+        const isFullscreen = !!(
+          document.fullscreenElement ||
+          document.webkitFullscreenElement ||
+          document.mozFullScreenElement ||
+          document.msFullscreenElement
+        );
+
+        if (isFullscreen) {
+          // Entering fullscreen - rotate to landscape
+          if (window.screen.orientation?.lock) {
+            try {
+              await window.screen.orientation.lock("landscape");
+            } catch (err) {
+              console.log("Orientation lock not supported:", err);
+            }
+          }
+        } else {
+          // Exiting fullscreen - unlock orientation
+          if (window.screen.orientation?.unlock) {
+            window.screen.orientation.unlock();
+          }
+        }
+      } catch (error) {
+        console.log("Orientation change error:", error);
+      }
+    };
+
+    // Add event listeners for different browsers
+    video.addEventListener("fullscreenchange", handleFullscreenChange);
+    video.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    video.addEventListener("mozfullscreenchange", handleFullscreenChange);
+    video.addEventListener("MSFullscreenChange", handleFullscreenChange);
+
+    return () => {
+      video.removeEventListener("fullscreenchange", handleFullscreenChange);
+      video.removeEventListener(
+        "webkitfullscreenchange",
+        handleFullscreenChange
+      );
+      video.removeEventListener("mozfullscreenchange", handleFullscreenChange);
+      video.removeEventListener("MSFullscreenChange", handleFullscreenChange);
+
+      // Unlock orientation when component unmounts
+      if (window.screen.orientation?.unlock) {
+        try {
+          window.screen.orientation.unlock();
+        } catch (err) {
+          console.log("Failed to unlock orientation:", err);
+        }
+      }
+    };
+  }, []);
+
   return (
     <video
       ref={videoRef}
@@ -51,6 +111,7 @@ function VideoPlayerCard({
       width={width}
       height={height}
       style={{ borderRadius: "12px", backgroundColor: "#000" }}
+      playsInline
     />
   );
 }

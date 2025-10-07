@@ -66,6 +66,32 @@ interface CategoryStore {
   ) => void;
   isLoadingList: Record<string, boolean>;
   setIsLoadingList: (slug: string, loading: boolean) => void;
+
+  // Search data
+  searchResults: Record<
+    string,
+    {
+      items: OphimHomeItem[];
+      pagination: OphimPagination;
+      seoOnPage: OphimSeoOnPage;
+      titlePage: string;
+      keyword: string;
+      appDomains: OphimAppDomains;
+    }
+  >;
+  setSearchResults: (
+    keyword: string,
+    searchData: {
+      items: OphimHomeItem[];
+      pagination: OphimPagination;
+      seoOnPage: OphimSeoOnPage;
+      titlePage: string;
+      keyword: string;
+      appDomains: OphimAppDomains;
+    }
+  ) => void;
+  isLoadingSearch: Record<string, boolean>;
+  setIsLoadingSearch: (keyword: string, loading: boolean) => void;
 }
 
 export const useStore = create<CategoryStore>()(
@@ -118,6 +144,23 @@ export const useStore = create<CategoryStore>()(
             isLoadingList: {
               ...state.isLoadingList,
               [slug]: loading,
+            },
+          })),
+
+        searchResults: {},
+        setSearchResults: (keyword, searchData) =>
+          set((state) => ({
+            searchResults: {
+              ...state.searchResults,
+              [keyword]: searchData,
+            },
+          })),
+        isLoadingSearch: {},
+        setIsLoadingSearch: (keyword, loading) =>
+          set((state) => ({
+            isLoadingSearch: {
+              ...state.isLoadingSearch,
+              [keyword]: loading,
             },
           })),
       }),
