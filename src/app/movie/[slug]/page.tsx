@@ -3,23 +3,56 @@ import SliderCastSection from "@/app/components/SliderCastSection";
 import VideoPlayerCard from "@/app/components/VideoPlayerCard";
 import { MovieAPI } from "@/app/lib/api";
 import { MoviePerson, OphimMovieItem } from "@/app/types/navType";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import React, { useEffect, useState } from "react";
 
 interface MoviePageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
+}
+
+interface WatchProgress {
+  movieSlug: string;
+  episodeSlug: string;
+  currentTime: number;
+  duration: number;
+  timestamp: number;
 }
 
 export default function MoviePage({ params }: MoviePageProps) {
-  const { slug } = params;
+  const [slug, setSlug] = useState<string>("");
   const [movieDetails, setMovieDetails] = useState<OphimMovieItem | null>(null);
   const [moviePeoples, setMoviePeoples] = useState<MoviePerson[]>([]);
   const [currentVideo, setCurrentVideo] = useState<string>("");
   const [selectedEpisode, setSelectedEpisode] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [resumeTime, setResumeTime] = useState<number>(0);
+  const [showResumeDialog, setShowResumeDialog] = useState(false);
+  const [savedProgress, setSavedProgress] = useState<WatchProgress | null>(
+    null
+  );
+
+  // Unwrap params first
+  useEffect(() => {
+    params.then((resolvedParams) => {
+      setSlug(resolvedParams.slug);
+    });
+  }, [params]);
 
   useEffect(() => {
+    if (!slug) return;
+
     async function fetchData() {
       try {
         const details = await MovieAPI.getMovieDetails(slug);
@@ -30,6 +63,9 @@ export default function MoviePage({ params }: MoviePageProps) {
         if (firstEpisode) {
           setCurrentVideo(firstEpisode.link_m3u8);
           setSelectedEpisode(firstEpisode.slug);
+
+          // Check for saved progress
+          checkSavedProgress(slug, firstEpisode.slug);
         }
 
         // Fetch movie peoples
@@ -49,15 +85,128 @@ export default function MoviePage({ params }: MoviePageProps) {
     fetchData();
   }, [slug]);
 
+  const checkSavedProgress = (movieSlug: string, episodeSlug: string) => {
+    const savedData = localStorage.getItem(
+      `watch_progress_${movieSlug}_${episodeSlug}`
+    );
+
+    if (savedData) {
+      const progress: WatchProgress = JSON.parse(savedData);
+      const percentWatched = (progress.currentTime / progress.duration) * 100;
+
+      if (progress.currentTime > 30 && percentWatched < 90) {
+        setSavedProgress(progress);
+        setShowResumeDialog(true);
+        return true;
+      }
+    }
+    return false;
+  };
+
   const handleEpisodeClick = (episodeLink: string, episodeSlug: string) => {
+    setResumeTime(0);
+    setSavedProgress(null);
+
     setCurrentVideo(episodeLink);
     setSelectedEpisode(episodeSlug);
+
+    setTimeout(() => {
+      checkSavedProgress(slug, episodeSlug);
+    }, 100);
+  };
+
+  const handleResume = () => {
+    if (savedProgress) {
+      setResumeTime(savedProgress.currentTime);
+    }
+    setShowResumeDialog(false);
+  };
+
+  const handleStartFromBeginning = () => {
+    setResumeTime(0);
+    setSavedProgress(null);
+
+    if (savedProgress) {
+      localStorage.removeItem(
+        `watch_progress_${savedProgress.movieSlug}_${savedProgress.episodeSlug}`
+      );
+    }
+    setShowResumeDialog(false);
+  };
+
+  const formatTime = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, "0")}:${secs
+        .toString()
+        .padStart(2, "0")}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-white text-xl">Đang tải...</div>
+      <div className="min-h-screen bg-gray-900">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 lg:py-8">
+          {/* Video Player Skeleton */}
+          <div className="flex justify-center items-center w-full mb-8">
+            <Skeleton className="w-full h-[450px] rounded-lg" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Left Column - Main Content */}
+            <div className="md:col-span-2 flex flex-col gap-4">
+              {/* Movie Info Skeleton */}
+              <div className="bg-black/60 flex flex-col gap-4 p-4 rounded-lg">
+                <Skeleton className="h-8 w-3/4" />
+                <Skeleton className="h-6 w-1/2" />
+                <Skeleton className="h-5 w-32 mt-2" />
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Skeleton key={i} className="h-10 w-20 rounded-lg" />
+                  ))}
+                </div>
+              </div>
+
+              {/* Description Skeleton */}
+              <div className="bg-black/60 flex flex-col gap-4 p-4 rounded-lg">
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+
+              {/* Cast Section Skeleton */}
+              <div className="bg-black/60 flex flex-col gap-4 p-4 rounded-lg">
+                <Skeleton className="h-6 w-32 mb-2" />
+                <div className="flex gap-4 overflow-hidden">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex-shrink-0 space-y-2">
+                      <Skeleton className="w-24 h-24 rounded-full" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column - Sidebar */}
+            <div className="md:col-span-1">
+              <div className="bg-black/60 flex flex-col gap-3 p-4 rounded-lg">
+                <Skeleton className="h-6 w-40 mb-2" />
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <div key={i} className="flex gap-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -84,10 +233,39 @@ export default function MoviePage({ params }: MoviePageProps) {
   return (
     <div className="min-h-screen bg-gray-900">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 lg:py-8">
+        {/* Resume Dialog */}
+        <AlertDialog open={showResumeDialog} onOpenChange={setShowResumeDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tiếp tục xem?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Bạn đã xem đến{" "}
+                {savedProgress && formatTime(savedProgress.currentTime)}. Bạn có
+                muốn xem tiếp từ vị trí đã dừng không?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleStartFromBeginning}>
+                Xem từ đầu
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleResume}>
+                Tiếp tục xem
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         {/* video player */}
         {currentVideo && (
           <div className="flex justify-center items-center w-full mb-8">
-            <VideoPlayerCard src={currentVideo} width="100%" height="450" />
+            <VideoPlayerCard
+              src={currentVideo}
+              width="100%"
+              height="450"
+              movieSlug={slug}
+              episodeSlug={selectedEpisode}
+              resumeTime={resumeTime}
+            />
           </div>
         )}
 

@@ -1,20 +1,28 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, use } from "react";
 import { useStore } from "@/app/store/useStore";
 import { MovieAPI } from "@/app/lib/api";
-import { Film, Play } from "lucide-react";
+import { ChevronRight, Film, Play } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+} from "@/components/ui/pagination";
 import Link from "next/link";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     category: string;
     slug: string;
-  };
+  }>;
 }
 
 export default function CategorySlugPage({ params }: PageProps) {
-  const { category, slug } = params;
+  const { category, slug } = use(params);
   const { listDataBySlug, setListData, isLoadingList, setIsLoadingList } =
     useStore();
   const [currentPage, setCurrentPage] = useState(1);
@@ -41,8 +49,28 @@ export default function CategorySlugPage({ params }: PageProps) {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-center items-center h-96">
-          <div className="text-lg">Đang tải...</div>
+        {/* Title Skeleton */}
+        <div className="flex items-center gap-3 mb-8">
+          <Skeleton className="w-8 h-8 rounded" />
+          <Skeleton className="h-9 w-64" />
+        </div>
+
+        {/* Grid Skeleton */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="w-full h-[280px] rounded-lg" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          ))}
+        </div>
+
+        {/* Pagination Skeleton */}
+        <div className="flex justify-center items-center gap-2 mt-8">
+          <Skeleton className="h-10 w-24" />
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-24" />
         </div>
       </div>
     );
@@ -100,27 +128,110 @@ export default function CategorySlugPage({ params }: PageProps) {
       </div>
 
       {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 mt-8">
-          <button
-            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-            disabled={currentPage === 1}
-            className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
-          >
-            Trang trước
-          </button>
-          <span className="px-4 py-2">
-            Trang {currentPage} / {totalPages}
-          </span>
-          <button
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-            }
-            disabled={currentPage === totalPages}
-            className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
-          >
-            Trang sau
-          </button>
-        </div>
+        <Pagination className="mt-8">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationLink
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                className={`flex items-center gap-1 mr-10 ${
+                  currentPage === 1
+                    ? "pointer-events-none opacity-50"
+                    : "cursor-pointer"
+                }`}
+              >
+                <ChevronRight className="w-4 h-4 ml-1 rotate-180" />
+                Trang đầu
+              </PaginationLink>
+            </PaginationItem>
+
+            {/* First page */}
+            {currentPage > 2 && (
+              <PaginationItem>
+                <PaginationLink
+                  onClick={() => setCurrentPage(1)}
+                  isActive={currentPage === 1}
+                  className="cursor-pointer"
+                >
+                  1
+                </PaginationLink>
+              </PaginationItem>
+            )}
+
+            {/* Ellipsis before current */}
+            {currentPage > 3 && (
+              <PaginationItem>
+                <PaginationEllipsis />
+              </PaginationItem>
+            )}
+
+            {/* Previous page */}
+            {currentPage > 1 && (
+              <PaginationItem>
+                <PaginationLink
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  className="cursor-pointer"
+                >
+                  {currentPage - 1}
+                </PaginationLink>
+              </PaginationItem>
+            )}
+
+            {/* Current page */}
+            <PaginationItem>
+              <PaginationLink isActive className="cursor-pointer">
+                {currentPage}
+              </PaginationLink>
+            </PaginationItem>
+
+            {/* Next page */}
+            {currentPage < totalPages && (
+              <PaginationItem>
+                <PaginationLink
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  className="cursor-pointer"
+                >
+                  {currentPage + 1}
+                </PaginationLink>
+              </PaginationItem>
+            )}
+
+            {/* Ellipsis after current */}
+            {currentPage < totalPages - 2 && (
+              <PaginationItem>
+                <PaginationEllipsis />
+              </PaginationItem>
+            )}
+
+            {/* Last page */}
+            {currentPage < totalPages - 1 && (
+              <PaginationItem>
+                <PaginationLink
+                  onClick={() => setCurrentPage(totalPages)}
+                  isActive={currentPage === totalPages}
+                  className="cursor-pointer"
+                >
+                  {totalPages}
+                </PaginationLink>
+              </PaginationItem>
+            )}
+
+            <PaginationItem>
+              <PaginationLink
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                }
+                className={`flex items-center gap-1 ml-10 ${
+                  currentPage === totalPages
+                    ? "pointer-events-none opacity-50"
+                    : "cursor-pointer"
+                }`}
+              >
+                Trang cuối
+                <ChevronRight className="w-4 h-4" />
+              </PaginationLink>
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       )}
     </div>
   );

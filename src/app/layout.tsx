@@ -58,16 +58,14 @@ export default function RootLayout({
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               <div className="col-span-1 md:col-span-2">
-                <h3 className="text-xl font-bold text-white mb-4">
-                  🎬 FilmHub
-                </h3>
+                <img src="/logo.png" alt="FilmHub Logo" className="h-30 mb-4" />
                 <p className="text-gray-400 mb-4">
                   Khám phá thế giới điện ảnh với hàng ngàn bộ phim từ khắp nơi
                   trên thế giới. Tìm hiểu thông tin chi tiết, xem trailer và
                   quản lý danh sách yêu thích của bạn.
                 </p>
                 <p className="text-sm text-gray-500">
-                  Dữ liệu phim được cung cấp bởi The Movie Database (TMDB).
+                  Dữ liệu phim được cung cấp bởi Ổ Phim (OPhim.live).
                 </p>
               </div>
 
@@ -82,14 +80,6 @@ export default function RootLayout({
                       className="hover:text-white transition-colors"
                     >
                       Trang chủ
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/favorites"
-                      className="hover:text-white transition-colors"
-                    >
-                      Yêu thích
                     </Link>
                   </li>
                   <li>
@@ -118,7 +108,7 @@ export default function RootLayout({
                 <ul className="space-y-2 text-gray-400">
                   <li>
                     <Link
-                      href="/genre/action"
+                      href="/the-loai/hanh-dong"
                       className="hover:text-white transition-colors"
                     >
                       Hành động
@@ -126,7 +116,7 @@ export default function RootLayout({
                   </li>
                   <li>
                     <Link
-                      href="/genre/comedy"
+                      href="/the-loai/hai-huoc"
                       className="hover:text-white transition-colors"
                     >
                       Hài kịch
@@ -134,7 +124,7 @@ export default function RootLayout({
                   </li>
                   <li>
                     <Link
-                      href="/genre/drama"
+                      href="/the-loai/chinh-kich"
                       className="hover:text-white transition-colors"
                     >
                       Chính kịch
@@ -142,7 +132,7 @@ export default function RootLayout({
                   </li>
                   <li>
                     <Link
-                      href="/genre/horror"
+                      href="/the-loai/kinh-di"
                       className="hover:text-white transition-colors"
                     >
                       Kinh dị
@@ -153,16 +143,16 @@ export default function RootLayout({
             </div>
 
             <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-              <p>&copy; 2024 FilmHub. Tất cả quyền được bảo lưu.</p>
+              <p>&copy; 2025 HyFlim. Tất cả quyền được bảo lưu.</p>
               <p className="mt-2 text-sm">
                 Dữ liệu được cung cấp bởi{" "}
                 <a
-                  href="https://www.themoviedb.org/"
+                  href="https://ophim16.cc/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-400 hover:text-blue-300 transition-colors"
                 >
-                  The Movie Database
+                  Ổ phim
                 </a>
               </p>
             </div>

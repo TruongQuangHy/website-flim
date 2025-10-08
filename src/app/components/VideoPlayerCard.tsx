@@ -6,25 +6,103 @@ interface VideoPlayerCardProps {
   src: string;
   width?: string;
   height?: string;
+  movieSlug: string;
+  episodeSlug: string;
+  onTimeUpdate?: (currentTime: number) => void;
+  resumeTime?: number;
 }
 
 function VideoPlayerCard({
   src,
   width = "100%",
   height = "auto",
+  movieSlug,
+  episodeSlug,
+  onTimeUpdate,
+  resumeTime,
 }: VideoPlayerCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
+
+  // Save watch progress to localStorage
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleTimeUpdate = () => {
+      const currentTime = video.currentTime;
+      const duration = video.duration;
+
+      // Only save if video is playing and has valid duration
+      if (currentTime > 0 && duration > 0) {
+        const watchProgress = {
+          movieSlug,
+          episodeSlug,
+          currentTime,
+          duration,
+          timestamp: Date.now(),
+        };
+
+        localStorage.setItem(
+          `watch_progress_${movieSlug}_${episodeSlug}`,
+          JSON.stringify(watchProgress)
+        );
+
+        // Call parent callback if provided
+        if (onTimeUpdate) {
+          onTimeUpdate(currentTime);
+        }
+      }
+    };
+
+    video.addEventListener("timeupdate", handleTimeUpdate);
+
+    return () => {
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+    };
+  }, [movieSlug, episodeSlug, onTimeUpdate]);
+
+  // Resume from saved time if provided
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || resumeTime === undefined || resumeTime === 0) return;
+
+    const setVideoTime = () => {
+      // Check if video is ready
+      if (video.readyState >= 2) {
+        // HAVE_CURRENT_DATA or greater
+        video.currentTime = resumeTime;
+      } else {
+        // Wait for metadata to load
+        const handleCanPlay = () => {
+          video.currentTime = resumeTime;
+          video.removeEventListener("canplay", handleCanPlay);
+        };
+        video.addEventListener("canplay", handleCanPlay);
+      }
+    };
+
+    // Set time immediately or wait for video to be ready
+    setVideoTime();
+
+    return () => {
+      video.removeEventListener("canplay", setVideoTime);
+    };
+  }, [resumeTime]);
 
   useEffect(() => {
     if (!src) return;
     const video = videoRef.current;
-
-    // Check if video element exists
     if (!video) return;
 
-    // Nếu trình duyệt hỗ trợ HLS.js
+    // Clean up previous HLS instance
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+    }
+
     if (Hls.isSupported()) {
       const hls = new Hls();
+      hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -34,9 +112,7 @@ function VideoPlayerCard({
       return () => {
         hls.destroy();
       };
-    }
-    // Nếu là Safari (hỗ trợ HLS native)
-    else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = src;
       video.addEventListener("loadedmetadata", () => {
         video.play().catch((err) => console.log("Autoplay prevented:", err));
