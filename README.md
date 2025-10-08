@@ -81,9 +81,10 @@ src/app/
 ├── lib/                # Utilities
 │   ├── api.ts          # API functions
 │   └── mockData.ts     # Mock data và utils
+├── [category]/                # Danh mục
+│   └── [slug]          # Mock data và utils
+│       └── page.tsx    # trang hiển thị phim theo danh mục
 ├── movie/[id]/         # Trang chi tiết phim
-│   └── page.tsx
-├── favorites/          # Trang danh sách yêu thích
 │   └── page.tsx
 ├── search/             # Trang tìm kiếm
 │   └── page.tsx
@@ -96,19 +97,7 @@ src/app/
 
 ### TMDB API
 
-Website hỗ trợ tích hợp với [The Movie Database API](https://www.themoviedb.org/). Để sử dụng:
-
-1. Tạo tài khoản tại [TMDB](https://www.themoviedb.org/)
-2. Lấy API key từ [Settings > API](https://www.themoviedb.org/settings/api)
-3. Thêm vào file `.env.local`
-
-### Mock Data
-
-Nếu không có API key, website sử dụng mock data với:
-
-- 8 bộ phim mẫu với đầy đủ thông tin
-- Diễn viên, trailer và thông tin chi tiết
-- Tính năng tìm kiếm và lọc hoạt động đầy đủ
+Website hỗ trợ tích hợp với [Ổ Phim API](https://ophim16.cc/). Để sử dụng:
 
 ## 🔧 Scripts
 
@@ -170,7 +159,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## 🙏 Credits
 
-- **Data**: [The Movie Database (TMDB)](https://www.themoviedb.org/)
+- **Data**: [Ổ Phim API](https://ophim16.cc/)
 - **Icons**: Heroicons, SVG icons
 - **Fonts**: Inter (Google Fonts)
 - **Framework**: Next.js, React, Tailwind CSS
