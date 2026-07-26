@@ -1,27 +1,23 @@
 "use client";
 
 import React from "react";
-// Import Swiper React components
 import { Swiper, SwiperSlide } from "swiper/react";
-
-// Import Swiper styles
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
-
 import "../styles.css";
-
-// import required modules
 import {
   Navigation,
   Pagination,
-  Mousewheel,
   Keyboard,
   Autoplay,
+  EffectFade,
 } from "swiper/modules";
+import "swiper/css/effect-fade";
 import { OphimHomeItem } from "../types/navType";
-import { ArrowLeft, ArrowRight, Play } from "lucide-react";
+import { Info, Play } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 function SliderBannerCard({
   homeItems,
@@ -33,63 +29,105 @@ function SliderBannerCard({
   };
 }) {
   return (
-    <div className="relative w-full h-[400px] rounded-lg overflow-hidden">
-      <button className="swiper-button-prev absolute left-2 top-1/2 translate-y-1/2 z-10 bg-gray-800 text-white p-2 rounded-full hover:bg-gray-700">
-        <ArrowLeft size={5} />
-      </button>
-
-      <button className="swiper-button-next absolute right-2 top-1/2 translate-y-1/2 z-10 bg-gray-800 text-white p-2 rounded-full hover:bg-gray-700">
-        <ArrowRight size={5} />
-      </button>
+    <div className="relative w-full h-[56vh] min-h-[320px] max-h-[720px] overflow-hidden hero-swiper">
       <Swiper
-        cssMode={true}
-        navigation={{
-          nextEl: ".swiper-button-next",
-          prevEl: ".swiper-button-prev",
+        navigation
+        pagination={{ clickable: true }}
+        keyboard
+        effect="fade"
+        fadeEffect={{ crossFade: true }}
+        autoplay={{
+          delay: 5000,
+          disableOnInteraction: false,
+          pauseOnMouseEnter: true,
         }}
-        pagination={true}
-        mousewheel={true}
-        keyboard={true}
-        autoplay={{ delay: 3000, disableOnInteraction: false }}
-        modules={[Navigation, Pagination, Mousewheel, Keyboard, Autoplay]}
-        className="mySwiper h-full"
+        modules={[Navigation, Pagination, Keyboard, Autoplay, EffectFade]}
+        className="h-full w-full"
+        loop={homeItems.length > 1}
       >
-        {homeItems.slice(0, 5).map((item) => (
-          <SwiperSlide key={item._id} className="relative group">
-            <img
-              src={`${homeAppDomains.cdnImage}/uploads/movies/${item.thumb_url}`}
+        {homeItems.slice(0, 8).map((item, idx) => (
+          <SwiperSlide key={item._id} className="relative !bg-[#0a0a0a] h-full">
+            <Image
+              src={`${homeAppDomains.cdnImage}/uploads/movies/${item.thumb_url || item.poster_url}`}
               alt={item.name}
-              className="w-full h-full object-cover"
+              fill
+              sizes="100vw"
+              priority={idx === 0}
+              className="object-cover object-top scale-105"
             />
-            <div className="absolute w-full h-full top-0 left-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-            <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 p-4 flex flex-col gap-2">
-              <div>
-                <h3 className="text-white text-xl font-bold mb-2">
-                  {item.name}
-                </h3>
-                <p className="text-gray-300 text-sm mb-2">{item.origin_name}</p>
-                <div className="flex items-center justify-center space-x-4">
-                  <span className="text-xs bg-red-600 px-2 py-1 rounded mr-2">
-                    {item.quality}
-                  </span>
-                  <span className="text-gray-300 text-xs">{item.year}</span>
-                  <span className="text-gray-300 text-xs">
-                    {item.episode_current}
-                  </span>
+
+            {/* Multi-layer cinematic gradients */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-black/40" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-transparent h-32" />
+
+            <div className="absolute inset-0 flex items-end sm:items-center pb-16 sm:pb-0">
+              <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 animate-fadeInUp">
+                <div className="max-w-xl space-y-3 sm:space-y-4 text-left">
+                  <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+                    {item.quality && (
+                      <span className="bg-brand text-white px-2 py-0.5 rounded font-bold uppercase tracking-wide">
+                        {item.quality}
+                      </span>
+                    )}
+                    <span className="text-white/80">{item.year}</span>
+                    {item.episode_current && (
+                      <>
+                        <span className="text-white/40">•</span>
+                        <span className="text-white/80">
+                          {item.episode_current}
+                        </span>
+                      </>
+                    )}
+                    {item.lang && (
+                      <>
+                        <span className="text-white/40">•</span>
+                        <span className="text-white/80">{item.lang}</span>
+                      </>
+                    )}
+                  </div>
+
+                  <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight drop-shadow-2xl line-clamp-2">
+                    {item.name}
+                  </h2>
+
+                  {item.origin_name && item.origin_name !== item.name && (
+                    <p className="text-white/60 text-sm sm:text-base line-clamp-1">
+                      {item.origin_name}
+                    </p>
+                  )}
+
+                  {item.category && item.category.length > 0 && (
+                    <p className="text-white/50 text-xs sm:text-sm hidden sm:block">
+                      {item.category.map((c) => c.name).join(" · ")}
+                    </p>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-3 pt-2">
+                    <Link
+                      href={`/movie/${item.slug}`}
+                      className="inline-flex items-center gap-2 bg-white text-black font-semibold px-5 sm:px-7 py-2.5 sm:py-3 rounded-md hover:bg-white/90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+                    >
+                      <Play className="w-5 h-5 fill-current" />
+                      Xem ngay
+                    </Link>
+                    <Link
+                      href={`/movie/${item.slug}`}
+                      className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white font-semibold px-5 sm:px-6 py-2.5 sm:py-3 rounded-md hover:bg-white/30 transition-all border border-white/10"
+                    >
+                      <Info className="w-5 h-5" />
+                      Chi tiết
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-black/50 w-full h-full flex justify-center items-center group-hover:opacity-100 opacity-0 transition-opacity duration-300">
-              <Link
-                href={`/movie/${item.slug}`}
-                className="bg-red-600 text-white p-4 rounded-full text-sm flex items-center justify-center cursor-pointer hover:bg-red-700 transition-colors duration-300"
-              >
-                <Play className="inline-block" size={20} />
-              </Link>
             </div>
           </SwiperSlide>
         ))}
       </Swiper>
+
+      {/* Fade into content below */}
+      <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#0a0a0a] to-transparent z-10" />
     </div>
   );
 }

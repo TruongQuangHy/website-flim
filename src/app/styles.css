@@ -4,11 +4,9 @@
 }
 
 .swiper-slide {
-  text-align: center;
+  text-align: left;
   font-size: 18px;
-  background: #444;
-
-  /* Center slide text vertically */
+  background: #0a0a0a;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -22,23 +20,48 @@
 }
 
 .swiper-pagination {
-  margin-bottom: 15px;
+  margin-bottom: 20px !important;
 }
 
 .swiper-pagination-bullet {
-  background: #444;
+  background: rgba(255, 255, 255, 0.4);
   opacity: 1;
-  width: 15px;
+  width: 12px;
   height: 4px;
-  border-radius: 3px;
-}
-.swiper-pagination-bullet-active {
-  background: #ff0000;
-  width: 30px;
+  border-radius: 2px;
+  transition: width 0.3s ease, background 0.3s ease;
 }
 
-.swiper-button-next,
-.swiper-button-prev {
-  top: 85%;
-  border-radius: 5px;
+.swiper-pagination-bullet-active {
+  background: #e50914;
+  width: 28px;
+}
+
+.hero-swiper .swiper-button-next,
+.hero-swiper .swiper-button-prev {
+  color: #fff;
+  width: 44px;
+  height: 44px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 9999px;
+  top: 50%;
+  margin-top: 0;
+  transition: background 0.2s ease;
+}
+
+.hero-swiper .swiper-button-next:hover,
+.hero-swiper .swiper-button-prev:hover {
+  background: rgba(229, 9, 20, 0.85);
+}
+
+.hero-swiper .swiper-button-next::after,
+.hero-swiper .swiper-button-prev::after {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swiper-pagination-bullet {
+    transition: none;
+  }
 }

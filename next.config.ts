@@ -6,18 +6,25 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "image.tmdb.org",
-        port: "",
         pathname: "/t/p/**",
       },
       {
         protocol: "https",
         hostname: "img.youtube.com",
-        port: "",
         pathname: "/vi/**",
+      },
+      {
+        protocol: "https",
+        hostname: "img.ophim.live",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "img.ophim1.com",
+        pathname: "/**",
       },
     ],
   },
-  // Enable experimental features if needed
   experimental: {
     optimizePackageImports: ["zustand", "axios"],
   },

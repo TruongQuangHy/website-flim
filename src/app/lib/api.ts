@@ -218,13 +218,19 @@ export class MovieAPI {
       );
     }
   }
-  static async getMovieDetails(slug: string): Promise<OphimMovieItem> {
+  static async getMovieDetails(slug: string): Promise<{
+    item: OphimMovieItem;
+    cdnImage: string;
+  }> {
     try {
       const response = await ophimApi.get(`/v1/api/phim/${slug}`);
       const responseData = response.data as OphimMovieDetailsResponse;
 
       if (responseData.status === "success" && responseData.data?.item) {
-        return responseData.data.item;
+        return {
+          item: responseData.data.item,
+          cdnImage: responseData.data.APP_DOMAIN_CDN_IMAGE || "",
+        };
       } else {
         throw new Error("Failed to fetch movie details - invalid response");
       }

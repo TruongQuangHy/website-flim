@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { NavItem } from "../types/navType";
 import { MovieAPI } from "../lib/api";
 import { useStore } from "../store/useStore";
+import { ChevronDown } from "lucide-react";
 
 interface ButtonHoverMenuCardProps {
   navItem: NavItem;
@@ -34,7 +37,6 @@ function ButtonHoverMenuCard({
   }, []);
 
   useEffect(() => {
-    // Fetch categories
     if (navItem.slug === "the-loai" && categories.length === 0) {
       const fetchCategories = async () => {
         setIsLoadingCategories(true);
@@ -49,7 +51,6 @@ function ButtonHoverMenuCard({
       fetchCategories();
     }
 
-    // Fetch countries
     if (navItem.slug === "quoc-gia" && countries.length === 0) {
       const fetchCountries = async () => {
         setIsLoadingCountries(true);
@@ -64,7 +65,6 @@ function ButtonHoverMenuCard({
       fetchCountries();
     }
 
-    // Fetch years
     if (navItem.slug === "nam-phat-hanh" && years.length === 0) {
       const fetchYears = async () => {
         setIsLoadingYears(true);
@@ -93,44 +93,28 @@ function ButtonHoverMenuCard({
 
   const getDisplayItems = () => {
     if (!isMounted) return [];
-    if (navItem.slug === "the-loai") {
-      return categories;
-    }
-    if (navItem.slug === "quoc-gia") {
-      return countries;
-    }
-    if (navItem.slug === "nam-phat-hanh") {
-      return years;
-    }
+    if (navItem.slug === "the-loai") return categories;
+    if (navItem.slug === "quoc-gia") return countries;
+    if (navItem.slug === "nam-phat-hanh") return years;
     return [];
   };
 
   const displayItems = getDisplayItems();
 
-  // Mobile version with accordion
   if (isMobile) {
     return (
-      <div className="border-b border-gray-700">
+      <div className="border-b border-white/10">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full flex items-center justify-between p-3 text-white hover:bg-gray-800 rounded transition-all duration-200"
+          className="w-full flex items-center justify-between p-3 text-white hover:bg-white/5 rounded-lg transition-all duration-200"
+          aria-expanded={isExpanded}
         >
           <span className="font-medium">{navItem.name}</span>
-          <svg
-            className={`w-5 h-5 transform transition-transform duration-300 ${
+          <ChevronDown
+            className={`w-5 h-5 transition-transform duration-300 ${
               isExpanded ? "rotate-180" : ""
             }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
+          />
         </button>
 
         <div
@@ -139,14 +123,14 @@ function ButtonHoverMenuCard({
           }`}
         >
           {isMounted && (
-            <div className="bg-gray-800/50 overflow-y-auto">
+            <div className="bg-black/40 overflow-y-auto max-h-72">
               {displayItems.map((item, index) => (
                 <Link
                   key={`${navItem.slug}-${item._id}`}
                   href={`/${navItem.slug}/${item.slug}`}
                   onClick={onItemClick}
-                  className="block px-6 py-2.5 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-150 animate-fadeInUp"
-                  style={{ animationDelay: `${index * 20}ms` }}
+                  className="block px-6 py-2.5 text-sm text-white/70 hover:bg-brand/20 hover:text-white transition-colors duration-150 animate-fadeInUp"
+                  style={{ animationDelay: `${index * 15}ms` }}
                 >
                   {item.name}
                 </Link>
@@ -158,23 +142,22 @@ function ButtonHoverMenuCard({
     );
   }
 
-  // Desktop version with hover menu
   return (
     <div className="relative inline-block text-left group">
-      <button className="hover:bg-[var(--color-gray-600)] p-2 rounded cursor-pointer duration-500 ease-in-out">
+      <button className="inline-flex items-center gap-1 px-3 py-2 text-sm text-white/80 hover:text-white rounded-md hover:bg-white/5 transition-colors cursor-pointer">
         {navItem.name}
+        <ChevronDown className="w-3.5 h-3.5 opacity-70 group-hover:rotate-180 transition-transform duration-200" />
       </button>
       {isMounted && (
-        <div className="absolute top-2 -left-1/2 -translate-x-1/2 w-[750px] grid grid-cols-5 gap-3 p-4 mt-8 bg-[var(--color-gray-700)] border border-gray-200 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-300 z-10">
+        <div className="absolute top-full left-1/2 -translate-x-1/2 w-[min(90vw,720px)] grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1 p-4 mt-1 bg-[#141414]/98 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl shadow-black/60 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 max-h-[70vh] overflow-y-auto">
           {displayItems.map((item) => (
-            <div
+            <Link
               key={`${navItem.slug}-${item._id}`}
-              className="hover:bg-[var(--color-gray-300)] p-2 rounded"
+              href={`/${navItem.slug}/${item.slug}`}
+              className="px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-brand/20 rounded-md transition-colors truncate"
             >
-              <Link className="" href={`/${navItem.slug}/${item.slug}`}>
-                {item.name}
-              </Link>
-            </div>
+              {item.name}
+            </Link>
           ))}
         </div>
       )}

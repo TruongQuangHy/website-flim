@@ -181,14 +181,18 @@ function VideoPlayerCard({
   }, []);
 
   return (
-    <video
-      ref={videoRef}
-      controls
-      width={width}
-      height={height}
-      style={{ borderRadius: "12px", backgroundColor: "#000" }}
-      playsInline
-    />
+    <div className="relative w-full bg-black aspect-video">
+      <video
+        ref={videoRef}
+        controls
+        width={width}
+        height={height}
+        className="w-full h-full object-contain bg-black"
+        playsInline
+        controlsList="nodownload"
+        aria-label="Trình phát video"
+      />
+    </div>
   );
 }
 

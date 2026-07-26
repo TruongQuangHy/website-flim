@@ -3,16 +3,30 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "./components/Navbar";
-import Link from "next/link";
+import SiteFooter from "./components/SiteFooter";
 
 const inter = Inter({
-  subsets: ["latin"],
+  subsets: ["latin", "vietnamese"],
   variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
-  title: "FilmHub - Khám phá thế giới điện ảnh",
-  /* ...bỏ phần còn lại để ngắn gọn... */
+  title: "HyFlim - Khám phá thế giới điện ảnh",
+  description:
+    "Xem phim chiếu rạp, phim mới cập nhật mỗi ngày. Kho phim bộ, phim lẻ, hoạt hình và TV Shows chất lượng cao.",
+  keywords: [
+    "xem phim",
+    "phim chiếu rạp",
+    "phim mới",
+    "phim bộ",
+    "phim lẻ",
+    "HyFlim",
+  ],
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({
@@ -22,7 +36,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" className="dark">
-      {/* --- Thêm Script AdSense ở đây --- */}
       <Script
         id="adsense-script"
         async
@@ -31,18 +44,11 @@ export default function RootLayout({
         strategy="beforeInteractive"
       />
       <body
-        className={`${inter.variable} font-sans antialiased bg-gray-900 text-white min-h-screen`}
+        className={`${inter.variable} font-sans antialiased bg-[#0a0a0a] text-white min-h-screen`}
       >
-        {/* Navigation */}
         <Navbar />
-
-        {/* Main Content */}
-        <main className="pt-5">{children}</main>
-
-        {/* Footer */}
-        <footer className="bg-gray-900 border-t border-gray-800 py-8 mt-16">
-          {/* ...footer như cũ... */}
-        </footer>
+        <main className="pt-16 min-h-[calc(100vh-16rem)]">{children}</main>
+        <SiteFooter />
       </body>
     </html>
   );
