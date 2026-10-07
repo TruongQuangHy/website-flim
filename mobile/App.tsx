@@ -29,10 +29,15 @@ export default function App() {
     slug: string;
     title: string;
   } | null>(null);
+  const [isVideoFullscreen, setIsVideoFullscreen] = useState(false);
 
   // Handle Android Hardware Back Button
   useEffect(() => {
     const backAction = () => {
+      if (isVideoFullscreen) {
+        setIsVideoFullscreen(false);
+        return true;
+      }
       if (selectedMovie) {
         setSelectedMovie(null);
         return true;
@@ -54,7 +59,7 @@ export default function App() {
     );
 
     return () => backHandler.remove();
-  }, [selectedMovie, activeCategory, activeTab]);
+  }, [isVideoFullscreen, selectedMovie, activeCategory, activeTab]);
 
   const handleSelectMovie = (movie: MovieItem) => {
     setSelectedMovie(movie);
@@ -83,6 +88,7 @@ export default function App() {
           movie={selectedMovie}
           onSelectMovie={handleSelectMovie}
           onBack={handleBack}
+          onFullscreenChange={setIsVideoFullscreen}
         />
       );
     }
@@ -178,17 +184,20 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        <StatusBar style="light" />
+      <SafeAreaView
+        style={styles.safeArea}
+        edges={isVideoFullscreen ? [] : ['top', 'left', 'right']}
+      >
+        <StatusBar hidden={isVideoFullscreen} style="light" />
 
-        {/* Global App Header */}
-        <Header {...getHeaderProps()} />
+        {/* Global App Header (hidden when fullscreen video is playing) */}
+        {!isVideoFullscreen && <Header {...getHeaderProps()} />}
 
         {/* Main Content Area */}
         <View style={styles.contentArea}>{renderContent()}</View>
 
-        {/* Bottom Tab Navigation Bar (hidden when watching movie) */}
-        {!selectedMovie && (
+        {/* Bottom Tab Navigation Bar (hidden when watching movie or in fullscreen) */}
+        {!selectedMovie && !isVideoFullscreen && (
           <View style={styles.tabBar}>
             <TouchableOpacity
               style={styles.tabItem}

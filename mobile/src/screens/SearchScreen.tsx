@@ -144,6 +144,10 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
           keyExtractor={(item) => item._id || item.slug}
           numColumns={3}
           contentContainerStyle={styles.gridContent}
+          initialNumToRender={9}
+          maxToRenderPerBatch={9}
+          windowSize={5}
+          removeClippedSubviews={true}
           renderItem={({ item }) => (
             <MovieCard
               movie={item}

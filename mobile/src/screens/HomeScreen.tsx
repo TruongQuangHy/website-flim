@@ -99,7 +99,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {/* Phim Chiếu Rạp */}
       <MovieSection
         title="Phim Chiếu Rạp"
-        movies={cinemaMovies}
+        movies={cinemaMovies.slice(0, 12)}
         onMoviePress={onSelectMovie}
         onSeeAllPress={() => onSeeAll('phim-chieu-rap', 'Phim Chiếu Rạp')}
       />
@@ -107,7 +107,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {/* Phim Mới Cập Nhật */}
       <MovieSection
         title="Phim Mới Cập Nhật"
-        movies={newMovies}
+        movies={newMovies.slice(0, 12)}
         onMoviePress={onSelectMovie}
         onSeeAllPress={() =>
           onSeeAll('phim-moi-cap-nhat', 'Phim Mới Cập Nhật')
@@ -117,7 +117,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {/* Phim Bộ */}
       <MovieSection
         title="Phim Bộ Đặc Sắc"
-        movies={seriesMovies}
+        movies={seriesMovies.slice(0, 12)}
         onMoviePress={onSelectMovie}
         onSeeAllPress={() => onSeeAll('phim-bo', 'Phim Bộ')}
       />
@@ -125,7 +125,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {/* Phim Lẻ */}
       <MovieSection
         title="Phim Lẻ Hay"
-        movies={singleMovies}
+        movies={singleMovies.slice(0, 12)}
         onMoviePress={onSelectMovie}
         onSeeAllPress={() => onSeeAll('phim-le', 'Phim Lẻ')}
       />
@@ -133,7 +133,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {/* Hoạt Hình */}
       <MovieSection
         title="Phim Hoạt Hình & Anime"
-        movies={animeMovies}
+        movies={animeMovies.slice(0, 12)}
         onMoviePress={onSelectMovie}
         onSeeAllPress={() => onSeeAll('hoat-hinh', 'Phim Hoạt Hình')}
       />

@@ -19,12 +19,14 @@ interface MovieDetailScreenProps {
   movie: MovieItem;
   onSelectMovie: (movie: MovieItem) => void;
   onBack: () => void;
+  onFullscreenChange?: (isFs: boolean) => void;
 }
 
 export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
   movie: initialMovie,
   onSelectMovie,
   onBack,
+  onFullscreenChange,
 }) => {
   const [loading, setLoading] = useState(true);
   const [movieDetail, setMovieDetail] = useState<MovieItem>(initialMovie);
@@ -113,6 +115,7 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
         servers={servers}
         activeServerIndex={activeServerIndex}
         onServerChange={handleServerChange}
+        onFullscreenChange={onFullscreenChange}
       />
 
       <ScrollView style={styles.scrollBody} showsVerticalScrollIndicator={false}>

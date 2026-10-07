@@ -99,6 +99,10 @@ export const CategoryScreen: React.FC<CategoryScreenProps> = ({
         keyExtractor={(item, index) => `${item._id || item.slug}-${index}`}
         numColumns={3}
         contentContainerStyle={styles.gridContent}
+        initialNumToRender={9}
+        maxToRenderPerBatch={9}
+        windowSize={5}
+        removeClippedSubviews={true}
         renderItem={({ item }) => (
           <MovieCard
             movie={item}

@@ -13,8 +13,8 @@ import { THEME } from '../constants/theme';
 import { getMovieImageUrl } from '../services/api';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 48) / 3; // 3 columns for mobile grid or horizontal row
-const CARD_HEIGHT = CARD_WIDTH * 1.5;
+export const DEFAULT_CARD_WIDTH = (width - 48) / 3;
+export const DEFAULT_CARD_HEIGHT = DEFAULT_CARD_WIDTH * 1.5;
 
 interface MovieCardProps {
   movie: MovieItem;
@@ -23,14 +23,14 @@ interface MovieCardProps {
   height?: number;
 }
 
-export const MovieCard: React.FC<MovieCardProps> = ({
+const MovieCardComponent: React.FC<MovieCardProps> = ({
   movie,
   onPress,
   width: customWidth,
   height: customHeight,
 }) => {
-  const cardW = customWidth || CARD_WIDTH;
-  const cardH = customHeight || CARD_HEIGHT;
+  const cardW = customWidth || DEFAULT_CARD_WIDTH;
+  const cardH = customHeight || DEFAULT_CARD_HEIGHT;
   const rating =
     movie.vote_average || movie.tmdb?.vote_average || (movie as any).rate || null;
 
@@ -38,13 +38,14 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     <TouchableOpacity
       style={[styles.container, { width: cardW }]}
       onPress={() => onPress(movie)}
-      activeOpacity={0.8}
+      activeOpacity={0.75}
     >
       <View style={[styles.posterWrapper, { width: cardW, height: cardH }]}>
         <Image
           source={{ uri: getMovieImageUrl(movie.poster_url || movie.thumb_url) }}
           style={styles.poster}
           resizeMode="cover"
+          fadeDuration={0}
         />
 
         {/* Quality Badge */}
@@ -81,6 +82,15 @@ export const MovieCard: React.FC<MovieCardProps> = ({
     </TouchableOpacity>
   );
 };
+
+export const MovieCard = React.memo(MovieCardComponent, (prev, next) => {
+  return (
+    prev.movie._id === next.movie._id &&
+    prev.movie.slug === next.movie.slug &&
+    prev.width === next.width &&
+    prev.height === next.height
+  );
+});
 
 const styles = StyleSheet.create({
   container: {

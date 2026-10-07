@@ -1,15 +1,19 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  ScrollView,
+  FlatList,
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MovieItem } from '../types';
 import { THEME } from '../constants/theme';
 import { MovieCard } from './MovieCard';
+
+const ITEM_WIDTH = 118;
+const ITEM_SPACING = 12; // THEME.spacing.md
+const TOTAL_ITEM_SIZE = ITEM_WIDTH + ITEM_SPACING;
 
 interface MovieSectionProps {
   title: string;
@@ -18,13 +22,34 @@ interface MovieSectionProps {
   onSeeAllPress?: () => void;
 }
 
-export const MovieSection: React.FC<MovieSectionProps> = ({
+const MovieSectionComponent: React.FC<MovieSectionProps> = ({
   title,
   movies,
   onMoviePress,
   onSeeAllPress,
 }) => {
   if (!movies || movies.length === 0) return null;
+
+  const renderItem = useCallback(
+    ({ item }: { item: MovieItem }) => (
+      <MovieCard
+        movie={item}
+        onPress={onMoviePress}
+        width={ITEM_WIDTH}
+        height={170}
+      />
+    ),
+    [onMoviePress]
+  );
+
+  const getItemLayout = useCallback(
+    (_: any, index: number) => ({
+      length: TOTAL_ITEM_SIZE,
+      offset: TOTAL_ITEM_SIZE * index,
+      index,
+    }),
+    []
+  );
 
   return (
     <View style={styles.container}>
@@ -51,25 +76,25 @@ export const MovieSection: React.FC<MovieSectionProps> = ({
         )}
       </View>
 
-      {/* Horizontal Cards Scroll */}
-      <ScrollView
+      {/* Optimized FlatList instead of raw ScrollView */}
+      <FlatList
+        data={movies}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-      >
-        {movies.map((movie) => (
-          <MovieCard
-            key={movie._id || movie.slug}
-            movie={movie}
-            onPress={onMoviePress}
-            width={118}
-            height={170}
-          />
-        ))}
-      </ScrollView>
+        keyExtractor={(item) => item._id || item.slug}
+        renderItem={renderItem}
+        getItemLayout={getItemLayout}
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        windowSize={3}
+        removeClippedSubviews={true}
+      />
     </View>
   );
 };
+
+export const MovieSection = React.memo(MovieSectionComponent);
 
 const styles = StyleSheet.create({
   container: {
