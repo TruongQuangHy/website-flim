@@ -14,6 +14,7 @@ import { THEME } from '../constants/theme';
 import { VideoPlayer } from '../components/VideoPlayer';
 import { EpisodePicker } from '../components/EpisodePicker';
 import { MovieSection } from '../components/MovieSection';
+import { MovieDetailSkeleton } from '../components/SkeletonLoader';
 
 interface MovieDetailScreenProps {
   movie: MovieItem;
@@ -107,6 +108,14 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
     (movieDetail as any).rate ||
     null;
 
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <MovieDetailSkeleton />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Video Player */}
@@ -119,14 +128,7 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
       />
 
       <ScrollView style={styles.scrollBody} showsVerticalScrollIndicator={false}>
-        {loading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color={THEME.colors.primary} />
-            <Text style={styles.loadingText}>Đang tải chi tiết phim...</Text>
-          </View>
-        ) : (
-          <>
-            {/* Movie Info Section */}
+        {/* Movie Info Section */}
             <View style={styles.infoSection}>
               <Text style={styles.title}>{movieDetail.name}</Text>
               {movieDetail.origin_name ? (
@@ -239,8 +241,6 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
             />
 
             <View style={{ height: 60 }} />
-          </>
-        )}
       </ScrollView>
     </View>
   );

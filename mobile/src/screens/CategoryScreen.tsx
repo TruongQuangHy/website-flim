@@ -13,6 +13,7 @@ import { MovieItem } from '../types';
 import { MovieAPI } from '../services/api';
 import { THEME } from '../constants/theme';
 import { MovieCard } from '../components/MovieCard';
+import { MovieGridSkeleton } from '../components/SkeletonLoader';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 3;
@@ -85,9 +86,8 @@ export const CategoryScreen: React.FC<CategoryScreenProps> = ({
 
   if (loading && movies.length === 0) {
     return (
-      <View style={styles.centerBox}>
-        <ActivityIndicator size="large" color={THEME.colors.primary} />
-        <Text style={styles.loadingText}>Đang tải {title}...</Text>
+      <View style={styles.container}>
+        <MovieGridSkeleton count={12} />
       </View>
     );
   }

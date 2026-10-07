@@ -12,6 +12,7 @@ import { MovieAPI } from '../services/api';
 import { THEME } from '../constants/theme';
 import { HeroBanner } from '../components/HeroBanner';
 import { MovieSection } from '../components/MovieSection';
+import { HomeSkeleton } from '../components/SkeletonLoader';
 
 interface HomeScreenProps {
   onSelectMovie: (movie: MovieItem) => void;
@@ -65,12 +66,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   };
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={THEME.colors.primary} />
-        <Text style={styles.loadingText}>Đang tải phim...</Text>
-      </View>
-    );
+    return <HomeSkeleton />;
   }
 
   // Use combination of cinema & new movies for hero banner

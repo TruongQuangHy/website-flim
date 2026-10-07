@@ -14,6 +14,7 @@ import { MovieItem } from '../types';
 import { MovieAPI } from '../services/api';
 import { THEME } from '../constants/theme';
 import { MovieCard } from '../components/MovieCard';
+import { MovieGridSkeleton } from '../components/SkeletonLoader';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 3;
@@ -120,11 +121,10 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
         </View>
       )}
 
-      {/* Loading Indicator */}
+      {/* Skeleton Loading Indicator */}
       {loading && (
-        <View style={styles.centerBox}>
-          <ActivityIndicator size="large" color={THEME.colors.primary} />
-          <Text style={styles.loadingText}>Đang tìm kiếm phim...</Text>
+        <View style={{ marginTop: 12 }}>
+          <MovieGridSkeleton count={6} />
         </View>
       )}
 

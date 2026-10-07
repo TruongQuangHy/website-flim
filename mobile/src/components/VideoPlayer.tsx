@@ -29,14 +29,40 @@ interface VideoPlayerProps {
 }
 
 // Injected JavaScript inside the video embed page:
-// 1. Makes the "Bỏ qua giới thiệu" button 100% touch-responsive on mobile
-// 2. Hooks fullscreen changes and notifies React Native to rotate to landscape
-// 3. Removes conflicting ad popups or blocking overlays
+// 1. Removes unwanted filename overlays / gradient top bar (#player_top) that covered half the video
+// 2. Makes the "Bỏ qua giới thiệu" button 100% touch-responsive on mobile
+// 3. Hooks fullscreen button clicks and notifies React Native without HTML5 loop bounce
 const INJECTED_JAVASCRIPT = `
 (function() {
-  // 1. Force skip-intro button to receive touches and clicks cleanly
+  // 1. Force remove #player_top, #video_mask, title overlays that covered half of video
   var style = document.createElement('style');
   style.innerHTML = \`
+    #player_top,
+    .bc-chrome-enter,
+    #video_mask,
+    .art-vtitle-bar,
+    .art-mask:not(.art-mask-show),
+    .video-info,
+    .p_t-left,
+    .p_t-right {
+      display: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      max-height: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      pointer-events: none !important;
+    }
+
+    html, body, #rp-player, .main-player, #player {
+      background: transparent !important;
+      background-color: transparent !important;
+      background-image: none !important;
+      overflow: hidden !important;
+    }
+
     .skip-buttons, .bc-skip-intro, .sb-button, .skip-10-prev, .skip-10-next {
       pointer-events: auto !important;
       z-index: 2147483647 !important;
@@ -48,6 +74,18 @@ const INJECTED_JAVASCRIPT = `
     }
   \`;
   document.head.appendChild(style);
+
+  function purgeBadOverlays() {
+    var badEls = document.querySelectorAll('#player_top, .bc-chrome-enter, #video_mask, .art-vtitle-bar');
+    badEls.forEach(function(el) {
+      el.style.display = 'none';
+      el.style.opacity = '0';
+      el.style.height = '0';
+      el.style.pointerEvents = 'none';
+    });
+  }
+  setInterval(purgeBadOverlays, 800);
+  purgeBadOverlays();
 
   function executeSkipIntro() {
     try {
@@ -89,39 +127,27 @@ const INJECTED_JAVASCRIPT = `
     }
   }, { capture: true, passive: false });
 
-  // 2. Notify React Native when player enters or exits fullscreen
-  function notifyFullscreen(isFs) {
+  // 2. Safely notify React Native when user clicks fullscreen button in web player
+  function sendToNative(msg) {
     if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({
-        type: 'fullscreen',
-        isFullscreen: !!isFs
-      }));
+      window.ReactNativeWebView.postMessage(JSON.stringify(msg));
     }
   }
 
-  document.addEventListener('fullscreenchange', function() {
-    notifyFullscreen(!!document.fullscreenElement);
-  });
-  document.addEventListener('webkitfullscreenchange', function() {
-    notifyFullscreen(!!document.webkitFullscreenElement);
-  });
-
-  // Check and hook JWPlayer
-  var pollCount = 0;
-  var jwPoller = setInterval(function() {
-    if (window.jwplayer) {
-      try {
-        var player = window.jwplayer('player');
-        if (player && typeof player.on === 'function') {
-          clearInterval(jwPoller);
-          player.on('fullscreen', function(e) {
-            notifyFullscreen(e.fullscreen);
-          });
-        }
-      } catch(e) {}
+  // Intercept click on player fullscreen icons
+  document.addEventListener('click', function(e) {
+    var target = e.target;
+    if (target && (
+      target.closest('.jw-icon-fullscreen') ||
+      target.closest('.art-control-fullscreen') ||
+      target.closest('.v_fs') ||
+      target.closest('[data-action="fullscreen"]')
+    )) {
+      e.preventDefault();
+      e.stopPropagation();
+      sendToNative({ type: 'toggleFullscreen' });
     }
-    if (++pollCount > 60) clearInterval(jwPoller);
-  }, 500);
+  }, { capture: true, passive: false });
 
   true;
 })();
@@ -138,11 +164,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [key, setKey] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const webViewRef = useRef<WebView>(null);
+  const lastOrientationToggleRef = useRef<number>(0);
 
   const videoUri = currentEpisode?.link_embed || currentEpisode?.link_m3u8;
 
   // Toggle fullscreen and automatically lock orientation to landscape or portrait
   const toggleFullscreen = async () => {
+    const now = Date.now();
+    if (now - lastOrientationToggleRef.current < 700) {
+      return; // Debounce rapid taps
+    }
+    lastOrientationToggleRef.current = now;
+
     try {
       if (!isFullscreen) {
         // Rotate to Landscape
@@ -151,10 +184,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         );
         setIsFullscreen(true);
         onFullscreenChange?.(true);
-        // Instruct video player in webview
-        webViewRef.current?.injectJavaScript(
-          `(function(){ try { var p = window.jwplayer && window.jwplayer('player'); if (p) p.setFullscreen(true); } catch(e){} })(); true;`
-        );
       } else {
         // Rotate back to Portrait
         await ScreenOrientation.lockAsync(
@@ -162,10 +191,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         );
         setIsFullscreen(false);
         onFullscreenChange?.(false);
-        // Instruct video player in webview
-        webViewRef.current?.injectJavaScript(
-          `(function(){ try { var p = window.jwplayer && window.jwplayer('player'); if (p) p.setFullscreen(false); } catch(e){} })(); true;`
-        );
       }
     } catch (err) {
       console.error('Error changing screen orientation:', err);
@@ -197,20 +222,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleMessage = async (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
-      if (data && data.type === 'fullscreen') {
-        if (data.isFullscreen && !isFullscreen) {
-          await ScreenOrientation.lockAsync(
-            ScreenOrientation.OrientationLock.LANDSCAPE
-          );
-          setIsFullscreen(true);
-          onFullscreenChange?.(true);
-        } else if (!data.isFullscreen && isFullscreen) {
-          await ScreenOrientation.lockAsync(
-            ScreenOrientation.OrientationLock.PORTRAIT_UP
-          );
-          setIsFullscreen(false);
-          onFullscreenChange?.(false);
-        }
+      if (data && data.type === 'toggleFullscreen') {
+        toggleFullscreen();
       }
     } catch (e) {
       // Non-JSON message, ignore
