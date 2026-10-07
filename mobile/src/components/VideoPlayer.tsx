@@ -31,7 +31,8 @@ interface VideoPlayerProps {
 // Injected JavaScript inside the video embed page:
 // 1. Removes unwanted filename overlays / gradient top bar (#player_top) that covered half the video
 // 2. Makes the "Bỏ qua giới thiệu" button 100% touch-responsive on mobile
-// 3. Hooks fullscreen button clicks and notifies React Native without HTML5 loop bounce
+// 3. Captures fullscreen clicks/touches on all web player controls (.item-max, .jw-icon-fullscreen, etc.)
+//    and instructs React Native to rotate to landscape smoothly without bounce loops.
 const INJECTED_JAVASCRIPT = `
 (function() {
   // 1. Force remove #player_top, #video_mask, title overlays that covered half of video
@@ -61,6 +62,26 @@ const INJECTED_JAVASCRIPT = `
       background-color: transparent !important;
       background-image: none !important;
       overflow: hidden !important;
+    }
+
+    html.rn-fullscreen,
+    html.rn-fullscreen body,
+    html.rn-fullscreen #rp-player,
+    html.rn-fullscreen .main-player,
+    html.rn-fullscreen #player,
+    html.rn-fullscreen .jwplayer {
+      width: 100vw !important;
+      height: 100vh !important;
+      max-width: 100vw !important;
+      max-height: 100vh !important;
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      z-index: 999999 !important;
     }
 
     .skip-buttons, .bc-skip-intro, .sb-button, .skip-10-prev, .skip-10-next {
@@ -134,20 +155,70 @@ const INJECTED_JAVASCRIPT = `
     }
   }
 
-  // Intercept click on player fullscreen icons
-  document.addEventListener('click', function(e) {
-    var target = e.target;
-    if (target && (
-      target.closest('.jw-icon-fullscreen') ||
-      target.closest('.art-control-fullscreen') ||
-      target.closest('.v_fs') ||
-      target.closest('[data-action="fullscreen"]')
-    )) {
+  function getFullscreenAction(target) {
+    if (!target) return null;
+    var enter = target.closest(
+      '.item-max, .jw-icon-fullscreen, .art-control-fullscreen, .v_fs, [data-action="fullscreen"], [title*="Toàn màn hình"], [title*="toàn màn hình"], [aria-label*="Toàn màn hình"], .jw-svg-icon-fullscreen-on, .vjs-fullscreen-control'
+    );
+    if (enter) return 'enter';
+
+    var exit = target.closest(
+      '.item-min, .jw-icon-fullscreen-off, [data-action="exit-fullscreen"], [title*="Thu nhỏ"], [title*="thu nhỏ"], [aria-label*="Thu nhỏ"], .jw-svg-icon-fullscreen-off'
+    );
+    if (exit) return 'exit';
+
+    return null;
+  }
+
+  function onFullscreenTouch(e) {
+    var action = getFullscreenAction(e.target);
+    if (action === 'enter') {
       e.preventDefault();
       e.stopPropagation();
-      sendToNative({ type: 'toggleFullscreen' });
+      e.stopImmediatePropagation();
+      sendToNative({ type: 'enterFullscreen' });
+    } else if (action === 'exit') {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      sendToNative({ type: 'exitFullscreen' });
     }
-  }, { capture: true, passive: false });
+  }
+
+  // Intercept in capture phase before page scripts run
+  window.addEventListener('touchend', onFullscreenTouch, { capture: true, passive: false });
+  window.addEventListener('click', onFullscreenTouch, { capture: true, passive: false });
+
+  document.addEventListener('fullscreenchange', function() {
+    if (document.fullscreenElement) {
+      sendToNative({ type: 'enterFullscreen' });
+    } else {
+      sendToNative({ type: 'exitFullscreen' });
+    }
+  });
+
+  document.addEventListener('webkitfullscreenchange', function() {
+    if (document.webkitFullscreenElement) {
+      sendToNative({ type: 'enterFullscreen' });
+    } else {
+      sendToNative({ type: 'exitFullscreen' });
+    }
+  });
+
+  window.__rnSetFullscreen = function(isFs) {
+    var root = document.documentElement;
+    var maxBtns = document.querySelectorAll('.item-max, .jw-icon-fullscreen');
+    var minBtns = document.querySelectorAll('.item-min, .jw-icon-fullscreen-off');
+    if (isFs) {
+      root.classList.add('rn-fullscreen');
+      maxBtns.forEach(function(b) { b.classList.add('d-none'); b.style.display = 'none'; });
+      minBtns.forEach(function(b) { b.classList.remove('d-none'); b.style.display = ''; });
+    } else {
+      root.classList.remove('rn-fullscreen');
+      maxBtns.forEach(function(b) { b.classList.remove('d-none'); b.style.display = ''; });
+      minBtns.forEach(function(b) { b.classList.add('d-none'); b.style.display = 'none'; });
+    }
+  };
 
   true;
 })();
@@ -163,37 +234,72 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [loading, setLoading] = useState(true);
   const [key, setKey] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const isFullscreenRef = useRef(false);
+  const transitionLockRef = useRef(0);
   const webViewRef = useRef<WebView>(null);
-  const lastOrientationToggleRef = useRef<number>(0);
 
   const videoUri = currentEpisode?.link_embed || currentEpisode?.link_m3u8;
 
-  // Toggle fullscreen and automatically lock orientation to landscape or portrait
-  const toggleFullscreen = async () => {
+  // Enter Fullscreen: lock to landscape orientation
+  const enterFullscreen = async () => {
     const now = Date.now();
-    if (now - lastOrientationToggleRef.current < 700) {
-      return; // Debounce rapid taps
+    if (isFullscreenRef.current || (now - transitionLockRef.current < 600)) {
+      return;
     }
-    lastOrientationToggleRef.current = now;
+    transitionLockRef.current = now;
+    isFullscreenRef.current = true;
+    setIsFullscreen(true);
+    onFullscreenChange?.(true);
 
     try {
-      if (!isFullscreen) {
-        // Rotate to Landscape
-        await ScreenOrientation.lockAsync(
-          ScreenOrientation.OrientationLock.LANDSCAPE
-        );
-        setIsFullscreen(true);
-        onFullscreenChange?.(true);
-      } else {
-        // Rotate back to Portrait
-        await ScreenOrientation.lockAsync(
-          ScreenOrientation.OrientationLock.PORTRAIT_UP
-        );
-        setIsFullscreen(false);
-        onFullscreenChange?.(false);
-      }
+      await ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.LANDSCAPE
+      );
     } catch (err) {
-      console.error('Error changing screen orientation:', err);
+      console.warn('Orientation lock landscape failed:', err);
+    }
+
+    webViewRef.current?.injectJavaScript(`
+      if (typeof window.__rnSetFullscreen === 'function') {
+        window.__rnSetFullscreen(true);
+      }
+      true;
+    `);
+  };
+
+  // Exit Fullscreen: restore portrait orientation
+  const exitFullscreen = async () => {
+    const now = Date.now();
+    if (!isFullscreenRef.current || (now - transitionLockRef.current < 600)) {
+      return;
+    }
+    transitionLockRef.current = now;
+    isFullscreenRef.current = false;
+    setIsFullscreen(false);
+    onFullscreenChange?.(false);
+
+    try {
+      await ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.PORTRAIT_UP
+      );
+    } catch (err) {
+      console.warn('Orientation lock portrait failed:', err);
+    }
+
+    webViewRef.current?.injectJavaScript(`
+      if (typeof window.__rnSetFullscreen === 'function') {
+        window.__rnSetFullscreen(false);
+      }
+      true;
+    `);
+  };
+
+  // Toggle fullscreen (used by native buttons)
+  const toggleFullscreen = () => {
+    if (isFullscreenRef.current) {
+      exitFullscreen();
+    } else {
+      enterFullscreen();
     }
   };
 
@@ -218,12 +324,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     `);
   };
 
-  // Handle messages from WebView (e.g. fullscreen changes inside web player)
+  // Handle messages from WebView (e.g. user tapped fullscreen icon on video)
   const handleMessage = async (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
-      if (data && data.type === 'toggleFullscreen') {
-        toggleFullscreen();
+      if (data) {
+        if (data.type === 'enterFullscreen') {
+          enterFullscreen();
+        } else if (data.type === 'exitFullscreen') {
+          exitFullscreen();
+        } else if (data.type === 'toggleFullscreen') {
+          toggleFullscreen();
+        }
       }
     } catch (e) {
       // Non-JSON message, ignore
@@ -233,8 +345,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Hardware back button: If in fullscreen, exit fullscreen first instead of exiting movie detail
   useEffect(() => {
     const onBackPress = () => {
-      if (isFullscreen) {
-        toggleFullscreen();
+      if (isFullscreenRef.current) {
+        exitFullscreen();
         return true;
       }
       return false;
@@ -249,7 +361,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       // Ensure orientation is reset to portrait when leaving screen
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
     };
-  }, [isFullscreen]);
+  }, []);
 
   const handleReload = () => {
     setLoading(true);
@@ -425,6 +537,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     backgroundColor: '#000',
     zIndex: 999999,
+    elevation: 999,
   },
   playerWrapper: {
     width: '100%',

@@ -30,6 +30,7 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
   onFullscreenChange,
 }) => {
   const [loading, setLoading] = useState(true);
+  const [isPlayerFullscreen, setIsPlayerFullscreen] = useState(false);
   const [movieDetail, setMovieDetail] = useState<MovieItem>(initialMovie);
   const [servers, setServers] = useState<EpisodeServer[]>([]);
   const [activeServerIndex, setActiveServerIndex] = useState(0);
@@ -124,11 +125,15 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
         servers={servers}
         activeServerIndex={activeServerIndex}
         onServerChange={handleServerChange}
-        onFullscreenChange={onFullscreenChange}
+        onFullscreenChange={(isFs) => {
+          setIsPlayerFullscreen(isFs);
+          onFullscreenChange?.(isFs);
+        }}
       />
 
-      <ScrollView style={styles.scrollBody} showsVerticalScrollIndicator={false}>
-        {/* Movie Info Section */}
+      {!isPlayerFullscreen && (
+        <ScrollView style={styles.scrollBody} showsVerticalScrollIndicator={false}>
+          {/* Movie Info Section */}
             <View style={styles.infoSection}>
               <Text style={styles.title}>{movieDetail.name}</Text>
               {movieDetail.origin_name ? (
@@ -241,7 +246,8 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
             />
 
             <View style={{ height: 60 }} />
-      </ScrollView>
+        </ScrollView>
+      )}
     </View>
   );
 };
