@@ -33,27 +33,28 @@ export default function HomePage() {
   }, [homeItems.length, setHomeData, setIsLoadingHomeItems]);
 
   const itemsListFilm = [
-    { title: "Phim mới", slug: "phim-moi-phat-hanh", category: "danh-sach" },
-    { title: "Phim chiếu rạp", slug: "phim-chieu-rap", category: "danh-sach" },
-    { title: "Phim bộ", slug: "phim-bo", category: "danh-sach" },
-    { title: "Phim lẻ", slug: "phim-le", category: "danh-sach" },
-    { title: "Phim hoạt hình", slug: "hoat-hinh", category: "danh-sach" },
-    { title: "TV Shows", slug: "tv-shows", category: "danh-sach" },
+    { title: "Phim Chiếu Rạp Mới Nhất", slug: "phim-chieu-rap", category: "danh-sach" },
+    { title: "Phim Mới Cập Nhật", slug: "phim-moi-cap-nhat", category: "danh-sach" },
+    { title: "Phim Bộ Đặc Sắc", slug: "phim-bo", category: "danh-sach" },
+    { title: "Phim Lẻ Tuyển Chọn", slug: "phim-le", category: "danh-sach" },
+    { title: "Phim Hoạt Hình & Anime", slug: "hoat-hinh", category: "danh-sach" },
+    { title: "Chương Trình TV Shows", slug: "tv-shows", category: "danh-sach" },
+    { title: "Phim Subteam Đặc Sắc", slug: "subteam", category: "danh-sach" },
   ];
 
   if (isLoadingHomeItems) {
     return (
       <div className="w-full">
-        <Skeleton className="w-full h-[56vh] min-h-[320px] rounded-none bg-white/5" />
-        <div className="mt-6 space-y-8 px-4 sm:px-6 lg:px-10 max-w-[1600px] mx-auto">
+        <Skeleton className="w-full h-[60vh] min-h-[380px] rounded-none bg-white/5" />
+        <div className="mt-8 space-y-8 px-4 sm:px-6 lg:px-10 max-w-[1600px] mx-auto">
           {[1, 2, 3].map((i) => (
             <div key={i} className="space-y-3">
-              <Skeleton className="h-7 w-48 bg-white/10" />
+              <Skeleton className="h-7 w-52 bg-white/10" />
               <div className="flex gap-3 overflow-hidden">
                 {[1, 2, 3, 4, 5, 6].map((j) => (
                   <Skeleton
                     key={j}
-                    className="w-[160px] aspect-[2/3] rounded-md flex-shrink-0 bg-white/10"
+                    className="w-[160px] aspect-[2/3] rounded-xl flex-shrink-0 bg-white/10"
                   />
                 ))}
               </div>
@@ -73,7 +74,7 @@ export default function HomePage() {
         />
       )}
 
-      <div className="relative z-10 -mt-8 sm:-mt-12 px-4 sm:px-6 lg:px-10 max-w-[1600px] mx-auto pb-8">
+      <div className="relative z-10 -mt-10 sm:-mt-16 px-4 sm:px-6 lg:px-10 max-w-[1600px] mx-auto pb-12 space-y-2">
         {itemsListFilm.map((item) => (
           <SliderListFilmSection
             key={item.slug}

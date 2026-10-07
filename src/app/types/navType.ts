@@ -3,258 +3,155 @@ export interface NavItem {
   slug: string;
 }
 
-export interface OphimCategory {
-  _id: string;
+export interface VsmovCategory {
+  _id: number | string;
   name: string;
   slug: string;
 }
 
-export interface OphimCategoriesResponse {
-  status: string;
-  message: string;
-  data: {
-    items: OphimCategory[];
-  };
-}
-
-export interface OphimCountry {
-  _id: string;
+export interface VsmovCountry {
+  _id: number | string;
   name: string;
   slug: string;
 }
 
-export interface OphimYear {
+export interface VsmovYear {
   year: number;
-}
-
-export interface OphimCountriesResponse {
-  status: string;
-  message: string;
-  data: {
-    items: OphimCountry[];
-  };
-}
-
-export interface OphimYearsResponse {
-  status: string;
-  message: string;
-  data: {
-    items: OphimYear[];
-  };
-}
-
-export interface OphimHomeItem {
   _id: string;
   name: string;
   slug: string;
-  origin_name: string;
-  poster_url?: string;
-  thumb_url: string;
-  year: number;
-  quality: string;
-  lang: string;
-  type: string;
-  time: string;
-  episode_current: string;
-  sub_docquyen: boolean;
-  tmdb?: {
-    type: string;
-    id: string;
-    season?: number | null;
-    vote_average: number;
-    vote_count: number;
-  };
-  imdb?: {
-    id: string;
-    vote_average: number;
-    vote_count: number;
-  };
-  modified: {
-    time: string;
-  };
-  category: {
-    id: string;
-    name: string;
-    slug: string;
-  }[];
-  country: {
-    id: string;
-    name: string;
-    slug: string;
-  }[];
 }
 
-export interface OphimPagination {
+export interface VsmovPagination {
   totalItems: number;
-  totalItemsPerPage: number;
+  totalItemsPerPage: number | string;
   currentPage: number;
-  pageRanges: number;
+  totalPages?: number;
+  pageRanges?: number;
 }
 
-export interface OphimSeoOnPage {
-  titleHead: string;
-  descriptionHead: string;
-  og_type: string;
-  og_image: string[];
+export interface VsmovTmdb {
+  type?: string | null;
+  id?: string | number | null;
+  season?: number | null;
+  vote_average?: string | number;
+  vote_count?: number;
 }
 
-export interface OphimAppDomains {
-  frontend: string;
-  cdnImage: string;
+export interface VsmovImdb {
+  id?: string | null;
+  vote_average?: number;
+  vote_count?: number;
 }
 
-export interface OphimHomeParams {
-  type_slug: string;
-  filterCategory: string[];
-  filterCountry: string[];
-  filterYear: string;
-  sortField: string;
-  pagination: OphimPagination;
-  itemsUpdateInDay: number;
-  totalSportsVideos: number;
-  itemsSportsVideosUpdateInDay: number;
-}
-
-export interface OphimHomeResponse {
-  status: string;
-  message: string;
-  data: {
-    seoOnPage: OphimSeoOnPage;
-    items: OphimHomeItem[];
-    itemsSportsVideos: unknown[];
-    params: OphimHomeParams;
-    type_list: string;
-    APP_DOMAIN_FRONTEND: string;
-    APP_DOMAIN_CDN_IMAGE: string;
-  };
-}
-
-export interface OphimListResponse {
-  status: string;
-  message: string;
-  data: {
-    seoOnPage: OphimSeoOnPage;
-    breadCrumb: Array<{
-      name: string;
-      slug?: string;
-      isCurrent?: boolean;
-      position?: number;
-    }>;
-    titlePage: string;
-    items: OphimHomeItem[];
-    params: {
-      type_slug: string;
-      filterCategory: string[];
-      filterCountry: string[];
-      filterYear: string;
-      filterType: string;
-      sortField: string;
-      sortType: string;
-      pagination: OphimPagination;
-    };
-    type_list: string;
-    APP_DOMAIN_FRONTEND: string;
-    APP_DOMAIN_CDN_IMAGE: string;
-  };
-}
-
-// Movie Details Types from Ophim API
-export interface OphimMovieItem {
-  _id: string;
+export interface VsmovEpisodeItem {
   name: string;
   slug: string;
-  origin_name: string;
-  content: string;
-  type: string;
-  status: string;
+  filename: string;
+  link_embed?: string;
+  link_m3u8?: string;
+}
+
+export interface VsmovEpisodeServer {
+  server_name: string;
+  server_data: VsmovEpisodeItem[];
+}
+
+export interface VsmovMovieItem {
+  _id: number | string;
+  name: string;
+  slug: string;
+  origin_name?: string;
+  poster_url?: string | Record<string, unknown> | null;
   thumb_url: string;
-  poster_url: string;
-  is_copyright: boolean;
-  sub_docquyen: boolean;
-  chieurap: boolean;
-  trailer_url: string;
-  time: string;
-  episode_current: string;
-  episode_total: string;
-  quality: string;
-  lang: string;
-  notify: string;
-  showtimes: string;
   year: number;
-  view: number;
-  actor: string[];
-  director: string[];
-  category: Array<{
-    id: string;
+  quality?: string;
+  lang?: string;
+  type?: string;
+  time?: string;
+  episode_current?: string;
+  episode_total?: string;
+  content?: string;
+  status?: string;
+  view?: number;
+  chieurap?: boolean;
+  sub_docquyen?: boolean;
+  trailer_url?: string | null;
+  actor?: string[];
+  director?: string[];
+  category?: Array<{
+    id: number | string;
     name: string;
     slug: string;
   }>;
-  country: Array<{
-    id: string;
+  country?: Array<{
+    id: number | string;
     name: string;
     slug: string;
   }>;
-  tmdb?: {
-    type: string;
-    id: string | number;
-    season?: number | null;
-    vote_average: number;
-    vote_count: number;
-  };
-  imdb?: {
-    id: string;
-    vote_average: number;
-    vote_count: number;
-  };
-  episodes?: Array<{
-    server_name: string;
-    server_data: Array<{
-      name: string;
-      slug: string;
-      filename: string;
-      link_embed: string;
-      link_m3u8: string;
-    }>;
-  }>;
-  created: {
+  tmdb?: VsmovTmdb;
+  imdb?: VsmovImdb;
+  modified?: {
     time: string;
   };
-  modified: {
+  created?: {
     time: string;
+  };
+  episodes?: VsmovEpisodeServer[];
+}
+
+export interface VsmovListResponse {
+  status: boolean | string;
+  msg?: string;
+  message?: string;
+  items: VsmovMovieItem[];
+  pathImage?: string;
+  pagination: VsmovPagination;
+  titlePage?: string;
+  appDomains?: {
+    frontend?: string;
+    cdnImage: string;
   };
 }
 
-export interface OphimMovieDetailsResponse {
-  status: string;
-  message: string;
-  data: {
-    seoOnPage: OphimSeoOnPage;
-    breadCrumb: Array<{
-      name: string;
-      slug?: string;
-      isCurrent?: boolean;
-      position?: number;
-    }>;
-    params: {
-      slug: string;
-    };
-    item: OphimMovieItem;
-    APP_DOMAIN_CDN_IMAGE: string;
-  };
+export interface VsmovDetailResponse {
+  status: boolean | string;
+  msg?: string;
+  message?: string;
+  movie: VsmovMovieItem;
+  episodes: VsmovEpisodeServer[];
 }
 
-// Movie Peoples Types
+export interface VsmovCategoriesResponse {
+  status: string | boolean;
+  message?: string;
+  data?: {
+    items: VsmovCategory[];
+  };
+  items?: VsmovCategory[];
+}
+
+export interface VsmovCountriesResponse {
+  status: string | boolean;
+  message?: string;
+  data?: {
+    items: VsmovCountry[];
+  };
+  items?: VsmovCountry[];
+}
+
+// Movie Peoples Types (backward compatibility)
 export interface MoviePerson {
   tmdb_people_id: number;
-  adult: boolean;
-  gender: number;
-  gender_name: string;
+  adult?: boolean;
+  gender?: number;
+  gender_name?: string;
   name: string;
-  original_name: string;
-  character: string;
-  known_for_department: string;
-  profile_path: string;
-  also_known_as: string[];
+  original_name?: string;
+  character?: string;
+  known_for_department?: string;
+  profile_path?: string;
+  also_known_as?: string[];
 }
 
 export interface MoviePeoplesResponse {
@@ -277,32 +174,25 @@ export interface MoviePeoplesResponse {
   };
 }
 
-export interface OphimSearchResponse {
-  status: string;
-  message: string;
-  data: {
-    seoOnPage: OphimSeoOnPage;
-    breadCrumb?: Array<{
-      name: string;
-      slug?: string;
-      isCurrent?: boolean;
-      position: number;
-    }>;
-    titlePage: string;
-    items: OphimHomeItem[];
-    params: {
-      type_slug: string;
-      keyword: string;
-      filterCategory?: string[];
-      filterCountry?: string[];
-      filterYear?: string;
-      filterType?: string;
-      sortField?: string;
-      sortType?: string;
-      pagination: OphimPagination;
-    };
-    type_list: string;
-    APP_DOMAIN_FRONTEND: string;
-    APP_DOMAIN_CDN_IMAGE: string;
-  };
+// Aliases for compatibility
+export type OphimCategory = VsmovCategory;
+export type OphimCategoriesResponse = VsmovCategoriesResponse;
+export type OphimCountry = VsmovCountry;
+export type OphimCountriesResponse = VsmovCountriesResponse;
+export type OphimYear = VsmovYear;
+export type OphimHomeItem = VsmovMovieItem;
+export type OphimMovieItem = VsmovMovieItem;
+export type OphimPagination = VsmovPagination;
+export type OphimListResponse = VsmovListResponse;
+
+export interface OphimAppDomains {
+  frontend?: string;
+  cdnImage: string;
+}
+
+export interface OphimSeoOnPage {
+  titleHead?: string;
+  descriptionHead?: string;
+  og_type?: string;
+  og_image?: string[];
 }

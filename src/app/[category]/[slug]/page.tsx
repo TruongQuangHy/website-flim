@@ -74,11 +74,11 @@ export default function CategorySlugPage({ params }: PageProps) {
     );
   }
 
-  const totalPages = listData.pagination
-    ? Math.ceil(
-        listData.pagination.totalItems / listData.pagination.totalItemsPerPage
-      )
-    : 1;
+  const totalItems = Number(listData.pagination?.totalItems) || 0;
+  const itemsPerPage = Number(listData.pagination?.totalItemsPerPage) || 24;
+  const totalPages =
+    listData.pagination?.totalPages ||
+    (totalItems > 0 ? Math.ceil(totalItems / itemsPerPage) : 1);
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 py-8">

@@ -1,6 +1,18 @@
 "use client";
-import { useEffect, useRef } from "react";
+
+import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
+import {
+  Maximize2,
+  Minimize2,
+  RotateCcw,
+  Lightbulb,
+  LightbulbOff,
+  ChevronLeft,
+  ChevronRight,
+  Tv,
+  Sparkles,
+} from "lucide-react";
 
 interface VideoPlayerCardProps {
   src: string;
@@ -8,6 +20,12 @@ interface VideoPlayerCardProps {
   height?: string;
   movieSlug: string;
   episodeSlug: string;
+  episodeName?: string;
+  serverName?: string;
+  hasPrevEpisode?: boolean;
+  hasNextEpisode?: boolean;
+  onPrevEpisode?: () => void;
+  onNextEpisode?: () => void;
   onTimeUpdate?: (currentTime: number) => void;
   resumeTime?: number;
 }
@@ -18,22 +36,54 @@ function VideoPlayerCard({
   height = "auto",
   movieSlug,
   episodeSlug,
+  episodeName,
+  serverName,
+  hasPrevEpisode = false,
+  hasNextEpisode = false,
+  onPrevEpisode,
+  onNextEpisode,
   onTimeUpdate,
   resumeTime,
 }: VideoPlayerCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
 
-  // Save watch progress to localStorage
+  // States for modern cinematic controls
+  const [isTheaterMode, setIsTheaterMode] = useState(false);
+  const [isLightsOff, setIsLightsOff] = useState(false);
+  const [ambientGlow, setAmbientGlow] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Check whether source is an embed iframe or m3u8 stream
+  const isEmbed = Boolean(
+    src &&
+      (!src.includes(".m3u8") ||
+        src.includes("/video/") ||
+        src.includes("embed") ||
+        src.includes("streamvsmov"))
+  );
+
+  // Handle Lights Off body scroll & escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (isLightsOff) setIsLightsOff(false);
+        if (isTheaterMode) setIsTheaterMode(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isLightsOff, isTheaterMode]);
+
+  // Save watch progress to localStorage (for HLS / direct video)
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || isEmbed) return;
 
-    const handleTimeUpdate = () => {
+    const handleProgressUpdate = () => {
       const currentTime = video.currentTime;
       const duration = video.duration;
 
-      // Only save if video is playing and has valid duration
       if (currentTime > 0 && duration > 0) {
         const watchProgress = {
           movieSlug,
@@ -48,32 +98,27 @@ function VideoPlayerCard({
           JSON.stringify(watchProgress)
         );
 
-        // Call parent callback if provided
         if (onTimeUpdate) {
           onTimeUpdate(currentTime);
         }
       }
     };
 
-    video.addEventListener("timeupdate", handleTimeUpdate);
-
+    video.addEventListener("timeupdate", handleProgressUpdate);
     return () => {
-      video.removeEventListener("timeupdate", handleTimeUpdate);
+      video.removeEventListener("timeupdate", handleProgressUpdate);
     };
-  }, [movieSlug, episodeSlug, onTimeUpdate]);
+  }, [movieSlug, episodeSlug, onTimeUpdate, isEmbed]);
 
-  // Resume from saved time if provided
+  // Resume playback for HLS video
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || resumeTime === undefined || resumeTime === 0) return;
+    if (!video || isEmbed || !resumeTime) return;
 
     const setVideoTime = () => {
-      // Check if video is ready
       if (video.readyState >= 2) {
-        // HAVE_CURRENT_DATA or greater
         video.currentTime = resumeTime;
       } else {
-        // Wait for metadata to load
         const handleCanPlay = () => {
           video.currentTime = resumeTime;
           video.removeEventListener("canplay", handleCanPlay);
@@ -82,31 +127,32 @@ function VideoPlayerCard({
       }
     };
 
-    // Set time immediately or wait for video to be ready
     setVideoTime();
-
     return () => {
       video.removeEventListener("canplay", setVideoTime);
     };
-  }, [resumeTime]);
+  }, [resumeTime, isEmbed]);
 
+  // Setup Hls.js when source is an m3u8 stream
   useEffect(() => {
-    if (!src) return;
+    if (!src || isEmbed) return;
     const video = videoRef.current;
     if (!video) return;
 
-    // Clean up previous HLS instance
     if (hlsRef.current) {
       hlsRef.current.destroy();
     }
 
     if (Hls.isSupported()) {
-      const hls = new Hls();
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+      });
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play().catch((err) => console.log("Autoplay prevented:", err));
+        video.play().catch(() => {});
       });
 
       return () => {
@@ -115,84 +161,176 @@ function VideoPlayerCard({
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = src;
       video.addEventListener("loadedmetadata", () => {
-        video.play().catch((err) => console.log("Autoplay prevented:", err));
+        video.play().catch(() => {});
       });
     }
-  }, [src]);
+  }, [src, isEmbed, reloadKey]);
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const handleFullscreenChange = async () => {
-      try {
-        // Check if entering fullscreen
-        const isFullscreen = !!(
-          document.fullscreenElement ||
-          document.webkitFullscreenElement ||
-          document.mozFullScreenElement ||
-          document.msFullscreenElement
-        );
-
-        if (isFullscreen) {
-          // Entering fullscreen - rotate to landscape
-          if (window.screen.orientation?.lock) {
-            try {
-              await window.screen.orientation.lock("landscape");
-            } catch (err) {
-              console.log("Orientation lock not supported:", err);
-            }
-          }
-        } else {
-          // Exiting fullscreen - unlock orientation
-          if (window.screen.orientation?.unlock) {
-            window.screen.orientation.unlock();
-          }
-        }
-      } catch (error) {
-        console.log("Orientation change error:", error);
-      }
-    };
-
-    // Add event listeners for different browsers
-    video.addEventListener("fullscreenchange", handleFullscreenChange);
-    video.addEventListener("webkitfullscreenchange", handleFullscreenChange);
-    video.addEventListener("mozfullscreenchange", handleFullscreenChange);
-    video.addEventListener("MSFullscreenChange", handleFullscreenChange);
-
-    return () => {
-      video.removeEventListener("fullscreenchange", handleFullscreenChange);
-      video.removeEventListener(
-        "webkitfullscreenchange",
-        handleFullscreenChange
-      );
-      video.removeEventListener("mozfullscreenchange", handleFullscreenChange);
-      video.removeEventListener("MSFullscreenChange", handleFullscreenChange);
-
-      // Unlock orientation when component unmounts
-      if (window.screen.orientation?.unlock) {
-        try {
-          window.screen.orientation.unlock();
-        } catch (err) {
-          console.log("Failed to unlock orientation:", err);
-        }
-      }
-    };
-  }, []);
+  const handleReload = () => {
+    setReloadKey((prev) => prev + 1);
+  };
 
   return (
-    <div className="relative w-full bg-black aspect-video">
-      <video
-        ref={videoRef}
-        controls
-        width={width}
-        height={height}
-        className="w-full h-full object-contain bg-black"
-        playsInline
-        controlsList="nodownload"
-        aria-label="Trình phát video"
-      />
-    </div>
+    <>
+      {/* Lights Off Overlay */}
+      {isLightsOff && (
+        <div
+          onClick={() => setIsLightsOff(false)}
+          className="fixed inset-0 bg-black/92 z-40 backdrop-blur-md transition-opacity duration-500 cursor-pointer"
+          title="Bấm để bật lại đèn"
+        />
+      )}
+
+      {/* Main Player Container */}
+      <div
+        className={`transition-all duration-500 ease-in-out ${
+          isLightsOff ? "relative z-50" : "relative"
+        } ${
+          isTheaterMode
+            ? "w-screen relative left-1/2 -translate-x-1/2 max-w-[1920px] px-2 sm:px-6"
+            : "w-full"
+        }`}
+      >
+        {/* Ambient Glow Aura */}
+        {ambientGlow && (
+          <div
+            className="absolute -inset-2 sm:-inset-4 bg-gradient-to-r from-red-600/25 via-brand/20 to-amber-600/20 rounded-2xl blur-2xl sm:blur-3xl opacity-75 pointer-events-none -z-10 animate-pulse-slow"
+            aria-hidden
+          />
+        )}
+
+        {/* Video Frame */}
+        <div className="relative w-full aspect-video bg-black rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 group/player">
+          {isEmbed ? (
+            <iframe
+              key={`embed-${src}-${reloadKey}`}
+              src={src}
+              className="w-full h-full border-0 object-cover bg-black"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+              allowFullScreen
+              title={episodeName || "Trình phát phim HyFlim"}
+            />
+          ) : (
+            <video
+              key={`video-${src}-${reloadKey}`}
+              ref={videoRef}
+              controls
+              width={width}
+              height={height}
+              className="w-full h-full object-contain bg-black"
+              playsInline
+              controlsList="nodownload"
+              aria-label="Trình phát video"
+            />
+          )}
+        </div>
+
+        {/* Cinematic Control Bar */}
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-white/70">
+          <div className="flex items-center gap-2">
+            {serverName && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/10 text-white font-medium">
+                <Tv className="w-3.5 h-3.5 text-brand" />
+                {serverName.trim()}
+              </span>
+            )}
+            {episodeName && (
+              <span className="font-semibold text-white px-2 py-1 rounded bg-brand/20 text-brand">
+                Tập: {episodeName}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1 sm:gap-2">
+            {/* Prev Episode */}
+            {hasPrevEpisode && onPrevEpisode && (
+              <button
+                type="button"
+                onClick={onPrevEpisode}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/15 hover:text-white transition-colors"
+                title="Tập trước"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Tập trước</span>
+              </button>
+            )}
+
+            {/* Next Episode */}
+            {hasNextEpisode && onNextEpisode && (
+              <button
+                type="button"
+                onClick={onNextEpisode}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/15 hover:text-white transition-colors"
+                title="Tập tiếp theo"
+              >
+                <span className="hidden sm:inline">Tập tiếp</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Ambient Glow Toggle */}
+            <button
+              type="button"
+              onClick={() => setAmbientGlow(!ambientGlow)}
+              className={`p-1.5 rounded-lg transition-colors ${
+                ambientGlow
+                  ? "text-brand bg-brand/10 hover:bg-brand/20"
+                  : "bg-white/5 hover:bg-white/15 text-white/60 hover:text-white"
+              }`}
+              title={ambientGlow ? "Tắt đèn viền (Ambient)" : "Bật đèn viền (Ambient)"}
+            >
+              <Sparkles className="w-4 h-4" />
+            </button>
+
+            {/* Lights Off Mode */}
+            <button
+              type="button"
+              onClick={() => setIsLightsOff(!isLightsOff)}
+              className={`p-1.5 rounded-lg transition-colors ${
+                isLightsOff
+                  ? "text-yellow-400 bg-yellow-400/10"
+                  : "bg-white/5 hover:bg-white/15 text-white/60 hover:text-white"
+              }`}
+              title={isLightsOff ? "Bật lại đèn (Esc)" : "Tắt đèn rạp phim"}
+            >
+              {isLightsOff ? (
+                <LightbulbOff className="w-4 h-4" />
+              ) : (
+                <Lightbulb className="w-4 h-4" />
+              )}
+            </button>
+
+            {/* Theater Mode */}
+            <button
+              type="button"
+              onClick={() => setIsTheaterMode(!isTheaterMode)}
+              className={`p-1.5 rounded-lg transition-colors ${
+                isTheaterMode
+                  ? "text-brand bg-brand/10"
+                  : "bg-white/5 hover:bg-white/15 text-white/60 hover:text-white"
+              }`}
+              title={isTheaterMode ? "Thu nhỏ về mặc định" : "Mở rộng rạp phim (Theater Mode)"}
+            >
+              {isTheaterMode ? (
+                <Minimize2 className="w-4 h-4" />
+              ) : (
+                <Maximize2 className="w-4 h-4" />
+              )}
+            </button>
+
+            {/* Reload Player */}
+            <button
+              type="button"
+              onClick={handleReload}
+              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-white/60 hover:text-white transition-colors"
+              title="Tải lại trình phát khi bị giật lag"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 

@@ -165,7 +165,7 @@ export const useStore = create<CategoryStore>()(
           })),
       }),
       {
-        name: "ophim-data-storage",
+        name: "hyflim-vsmov-storage",
         storage: createJSONStorage(() => localStorage),
       }
     )

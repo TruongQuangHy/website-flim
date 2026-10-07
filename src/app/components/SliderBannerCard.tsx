@@ -14,8 +14,9 @@ import {
   EffectFade,
 } from "swiper/modules";
 import "swiper/css/effect-fade";
-import { OphimHomeItem } from "../types/navType";
-import { Info, Play } from "lucide-react";
+import { VsmovMovieItem } from "../types/navType";
+import { getMovieImageUrl } from "../lib/api";
+import { Info, Play, Star } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -23,13 +24,15 @@ function SliderBannerCard({
   homeItems,
   homeAppDomains,
 }: {
-  homeItems: OphimHomeItem[];
-  homeAppDomains: {
+  homeItems: VsmovMovieItem[];
+  homeAppDomains?: {
     cdnImage: string;
   };
 }) {
+  const cdnImage = homeAppDomains?.cdnImage || "";
+
   return (
-    <div className="relative w-full h-[56vh] min-h-[320px] max-h-[720px] overflow-hidden hero-swiper">
+    <div className="relative w-full h-[60vh] min-h-[380px] max-h-[720px] overflow-hidden hero-swiper">
       <Swiper
         navigation
         pagination={{ clickable: true }}
@@ -45,89 +48,94 @@ function SliderBannerCard({
         className="h-full w-full"
         loop={homeItems.length > 1}
       >
-        {homeItems.slice(0, 8).map((item, idx) => (
-          <SwiperSlide key={item._id} className="relative !bg-[#0a0a0a] h-full">
-            <Image
-              src={`${homeAppDomains.cdnImage}/uploads/movies/${item.thumb_url || item.poster_url}`}
-              alt={item.name}
-              fill
-              sizes="100vw"
-              priority={idx === 0}
-              className="object-cover object-top scale-105"
-            />
+        {homeItems.slice(0, 8).map((item, idx) => {
+          const bannerImg = getMovieImageUrl(item, cdnImage);
+          const tmdbRating = item.tmdb?.vote_average
+            ? Number(item.tmdb.vote_average).toFixed(1)
+            : null;
 
-            {/* Multi-layer cinematic gradients */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-black/40" />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-transparent h-32" />
+          return (
+            <SwiperSlide key={item._id} className="relative !bg-[#0a0a0a] h-full">
+              {bannerImg && (
+                <Image
+                  src={bannerImg}
+                  alt={item.name}
+                  fill
+                  sizes="100vw"
+                  priority={idx === 0}
+                  className="object-cover object-top scale-105"
+                />
+              )}
 
-            <div className="absolute inset-0 flex items-end sm:items-center pb-16 sm:pb-0">
-              <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 animate-fadeInUp">
-                <div className="max-w-xl space-y-3 sm:space-y-4 text-left">
-                  <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-                    {item.quality && (
-                      <span className="bg-brand text-white px-2 py-0.5 rounded font-bold uppercase tracking-wide">
-                        {item.quality}
-                      </span>
-                    )}
-                    <span className="text-white/80">{item.year}</span>
-                    {item.episode_current && (
-                      <>
-                        <span className="text-white/40">•</span>
-                        <span className="text-white/80">
-                          {item.episode_current}
+              {/* Multi-layer cinematic gradients */}
+              <div className="absolute inset-0 bg-gradient-to-r from-black via-black/75 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-black/40" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-transparent h-32" />
+
+              <div className="absolute inset-0 flex items-end sm:items-center pb-16 sm:pb-0">
+                <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 animate-fadeInUp">
+                  <div className="max-w-xl space-y-3 sm:space-y-4 text-left">
+                    <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+                      {item.quality && (
+                        <span className="bg-brand text-white px-2 py-0.5 rounded font-extrabold uppercase tracking-wide">
+                          {item.quality}
                         </span>
-                      </>
+                      )}
+                      {item.chieurap && (
+                        <span className="bg-amber-500/90 text-black px-2 py-0.5 rounded font-bold text-xs uppercase">
+                          Chiếu Rạp
+                        </span>
+                      )}
+                      {tmdbRating && Number(tmdbRating) > 0 && (
+                        <span className="inline-flex items-center gap-1 bg-black/70 backdrop-blur text-amber-400 font-bold px-2 py-0.5 rounded ring-1 ring-amber-400/30">
+                          <Star className="w-3 h-3 fill-amber-400" />
+                          {tmdbRating} TMDB
+                        </span>
+                      )}
+                      <span className="text-white/80">{item.year}</span>
+                      {item.episode_current && (
+                        <>
+                          <span className="text-white/40">•</span>
+                          <span className="text-white/80">
+                            {item.episode_current}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white leading-tight drop-shadow-xl tracking-tight">
+                      {item.name}
+                    </h1>
+
+                    {item.origin_name && item.origin_name !== item.name && (
+                      <p className="text-sm sm:text-base text-white/70 italic drop-shadow">
+                        {item.origin_name}
+                      </p>
                     )}
-                    {item.lang && (
-                      <>
-                        <span className="text-white/40">•</span>
-                        <span className="text-white/80">{item.lang}</span>
-                      </>
-                    )}
-                  </div>
 
-                  <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight drop-shadow-2xl line-clamp-2">
-                    {item.name}
-                  </h2>
-
-                  {item.origin_name && item.origin_name !== item.name && (
-                    <p className="text-white/60 text-sm sm:text-base line-clamp-1">
-                      {item.origin_name}
-                    </p>
-                  )}
-
-                  {item.category && item.category.length > 0 && (
-                    <p className="text-white/50 text-xs sm:text-sm hidden sm:block">
-                      {item.category.map((c) => c.name).join(" · ")}
-                    </p>
-                  )}
-
-                  <div className="flex flex-wrap items-center gap-3 pt-2">
-                    <Link
-                      href={`/movie/${item.slug}`}
-                      className="inline-flex items-center gap-2 bg-white text-black font-semibold px-5 sm:px-7 py-2.5 sm:py-3 rounded-md hover:bg-white/90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg"
-                    >
-                      <Play className="w-5 h-5 fill-current" />
-                      Xem ngay
-                    </Link>
-                    <Link
-                      href={`/movie/${item.slug}`}
-                      className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white font-semibold px-5 sm:px-6 py-2.5 sm:py-3 rounded-md hover:bg-white/30 transition-all border border-white/10"
-                    >
-                      <Info className="w-5 h-5" />
-                      Chi tiết
-                    </Link>
+                    <div className="flex items-center gap-3 pt-2">
+                      <Link
+                        href={`/movie/${item.slug}`}
+                        className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-lg font-bold text-sm sm:text-base shadow-xl shadow-brand/40 transition-all hover:scale-105 active:scale-95"
+                      >
+                        <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
+                        Xem ngay
+                      </Link>
+                      <Link
+                        href={`/movie/${item.slug}`}
+                        className="inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white backdrop-blur-md px-4 sm:px-5 py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base transition-colors"
+                      >
+                        <Info className="w-4 h-4 sm:w-5 sm:h-5" />
+                        Chi tiết
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </SwiperSlide>
-        ))}
+            </SwiperSlide>
+          );
+        })}
       </Swiper>
-
-      {/* Fade into content below */}
-      <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#0a0a0a] to-transparent z-10" />
     </div>
   );
 }

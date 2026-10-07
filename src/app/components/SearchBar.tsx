@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search } from "lucide-react";
 import { useState, useEffect } from "react";
-import { MovieAPI } from "@/app/lib/api";
+import { MovieAPI, getMovieImageUrl } from "@/app/lib/api";
 import { OphimHomeItem } from "@/app/types/navType";
 import Link from "next/link";
 import Image from "next/image";
@@ -115,15 +115,13 @@ export function SearchBar() {
                     className="flex gap-3 w-full rounded-lg p-2 hover:bg-white/10 transition-colors group"
                   >
                     <div className="relative w-16 h-24 rounded-md overflow-hidden flex-shrink-0 bg-muted ring-1 ring-white/10 group-hover:ring-brand/50 transition-all">
-                      {cdnDomain && (
-                        <Image
-                          src={`${cdnDomain}/uploads/movies/${movie.thumb_url}`}
-                          alt={movie.name}
-                          fill
-                          sizes="64px"
-                          className="object-cover"
-                        />
-                      )}
+                      <Image
+                        src={getMovieImageUrl(movie, cdnDomain)}
+                        alt={movie.name}
+                        fill
+                        sizes="64px"
+                        className="object-cover"
+                      />
                     </div>
                     <div className="flex flex-col gap-1.5 min-w-0 py-0.5">
                       <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-brand transition-colors">

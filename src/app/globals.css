@@ -274,3 +274,16 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Cinematic Ambient Glow utility */
+.ambient-glow-cinematic {
+  box-shadow: 0 0 60px -10px rgba(229, 9, 20, 0.25);
+}
+
+/* Glassmorphism panel */
+.glass-panel {
+  background: rgba(20, 20, 20, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}

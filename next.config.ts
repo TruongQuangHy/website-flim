@@ -15,6 +15,31 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "vsmov.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.vsmov.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "nguon.vsphim.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.vsphim.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.streamvsmov.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
         hostname: "img.ophim.live",
         pathname: "/**",
       },
