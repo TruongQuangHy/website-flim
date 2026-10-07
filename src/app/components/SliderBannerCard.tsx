@@ -32,7 +32,7 @@ function SliderBannerCard({
   const cdnImage = homeAppDomains?.cdnImage || "";
 
   return (
-    <div className="relative w-full h-[60vh] min-h-[380px] max-h-[720px] overflow-hidden hero-swiper">
+    <div className="relative w-full h-[52vh] sm:h-[60vh] min-h-[360px] sm:min-h-[420px] max-h-[720px] overflow-hidden hero-swiper">
       <Swiper
         navigation
         pagination={{ clickable: true }}
@@ -72,22 +72,22 @@ function SliderBannerCard({
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-black/40" />
               <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-transparent h-32" />
 
-              <div className="absolute inset-0 flex items-end sm:items-center pb-16 sm:pb-0">
+              <div className="absolute inset-0 flex items-end sm:items-center pb-12 sm:pb-0">
                 <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 animate-fadeInUp">
-                  <div className="max-w-xl space-y-3 sm:space-y-4 text-left">
-                    <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+                  <div className="max-w-xl space-y-2.5 sm:space-y-4 text-left">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-sm">
                       {item.quality && (
-                        <span className="bg-brand text-white px-2 py-0.5 rounded font-extrabold uppercase tracking-wide">
+                        <span className="bg-brand text-white px-2 py-0.5 rounded font-extrabold uppercase tracking-wide text-[10px] sm:text-xs">
                           {item.quality}
                         </span>
                       )}
                       {item.chieurap && (
-                        <span className="bg-amber-500/90 text-black px-2 py-0.5 rounded font-bold text-xs uppercase">
+                        <span className="bg-amber-500/90 text-black px-1.5 py-0.5 rounded font-bold text-[10px] sm:text-xs uppercase">
                           Chiếu Rạp
                         </span>
                       )}
                       {tmdbRating && Number(tmdbRating) > 0 && (
-                        <span className="inline-flex items-center gap-1 bg-black/70 backdrop-blur text-amber-400 font-bold px-2 py-0.5 rounded ring-1 ring-amber-400/30">
+                        <span className="inline-flex items-center gap-1 bg-black/70 backdrop-blur text-amber-400 font-bold px-1.5 py-0.5 rounded ring-1 ring-amber-400/30 text-[10px] sm:text-xs">
                           <Star className="w-3 h-3 fill-amber-400" />
                           {tmdbRating} TMDB
                         </span>
@@ -96,36 +96,36 @@ function SliderBannerCard({
                       {item.episode_current && (
                         <>
                           <span className="text-white/40">•</span>
-                          <span className="text-white/80">
+                          <span className="text-white/80 truncate max-w-[120px]">
                             {item.episode_current}
                           </span>
                         </>
                       )}
                     </div>
 
-                    <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white leading-tight drop-shadow-xl tracking-tight">
+                    <h1 className="text-xl sm:text-4xl lg:text-5xl font-black text-white leading-tight drop-shadow-xl tracking-tight line-clamp-2">
                       {item.name}
                     </h1>
 
                     {item.origin_name && item.origin_name !== item.name && (
-                      <p className="text-sm sm:text-base text-white/70 italic drop-shadow">
+                      <p className="text-xs sm:text-base text-white/70 italic drop-shadow line-clamp-1">
                         {item.origin_name}
                       </p>
                     )}
 
-                    <div className="flex items-center gap-3 pt-2">
+                    <div className="flex items-center gap-2.5 sm:gap-3 pt-1 sm:pt-2">
                       <Link
                         href={`/movie/${item.slug}`}
-                        className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-lg font-bold text-sm sm:text-base shadow-xl shadow-brand/40 transition-all hover:scale-105 active:scale-95"
+                        className="inline-flex items-center gap-1.5 sm:gap-2 bg-brand hover:bg-brand-hover text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-bold text-xs sm:text-base shadow-xl shadow-brand/40 transition-all hover:scale-105 active:scale-95"
                       >
-                        <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
+                        <Play className="w-3.5 h-3.5 sm:w-5 sm:h-5 fill-current" />
                         Xem ngay
                       </Link>
                       <Link
                         href={`/movie/${item.slug}`}
-                        className="inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white backdrop-blur-md px-4 sm:px-5 py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base transition-colors"
+                        className="inline-flex items-center gap-1.5 sm:gap-2 bg-white/15 hover:bg-white/25 text-white backdrop-blur-md px-3.5 sm:px-5 py-2 sm:py-3 rounded-lg font-semibold text-xs sm:text-base transition-colors active:scale-95"
                       >
-                        <Info className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <Info className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                         Chi tiết
                       </Link>
                     </div>

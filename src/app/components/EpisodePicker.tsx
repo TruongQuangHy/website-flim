@@ -30,7 +30,13 @@ export default function EpisodePicker({
   // Normalize servers data
   const normalizedServers: VsmovEpisodeServer[] = useMemo(() => {
     if (servers && servers.length > 0) {
-      return servers;
+      return servers.map((srv, idx) => ({
+        ...srv,
+        server_name: (srv.server_name || `Server ${idx + 1}`)
+          .replace(/[\r\n]+/g, " ")
+          .replace(/\s+/g, " ")
+          .trim(),
+      }));
     }
     if (episodes && episodes.length > 0) {
       return [
@@ -158,7 +164,7 @@ export default function EpisodePicker({
       )}
 
       {/* Header + Search + Range selector */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-sm uppercase tracking-wider text-white/80">
             Danh sách tập phim
@@ -170,14 +176,14 @@ export default function EpisodePicker({
 
         {/* Quick search episode if > 20 */}
         {allEpisodesInServer.length > 20 && (
-          <div className="relative w-36 sm:w-44">
+          <div className="relative w-full sm:w-44">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" />
             <input
               type="text"
               placeholder="Tìm số tập..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-white/40 focus:outline-none focus:border-brand"
+              className="w-full pl-8 pr-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-white/40 focus:outline-none focus:border-brand"
             />
           </div>
         )}
@@ -218,9 +224,9 @@ export default function EpisodePicker({
               key={ep.slug}
               type="button"
               onClick={() => handleEpisodeClick(ep)}
-              className={`relative group px-2 py-2 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+              className={`relative group px-1.5 sm:px-2 py-2 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
                 isActive
-                  ? "bg-brand text-white shadow-lg shadow-brand/40 scale-[1.03] ring-1 ring-white/30 font-bold"
+                  ? "bg-brand text-white shadow-lg shadow-brand/40 ring-1 ring-white/30 font-bold"
                   : isWatched
                     ? "bg-white/5 text-white/50 hover:bg-white/15 hover:text-white"
                     : "bg-white/10 text-white/90 hover:bg-white/20 hover:text-white"
@@ -229,9 +235,9 @@ export default function EpisodePicker({
               title={`Tập ${ep.name}${isWatched ? " (Đã xem)" : ""}`}
             >
               {isActive ? (
-                <Play className="w-3 h-3 fill-current animate-pulse" />
+                <Play className="w-3 h-3 fill-current animate-pulse shrink-0" />
               ) : isWatched ? (
-                <Check className="w-2.5 h-2.5 text-emerald-400 opacity-60" />
+                <Check className="w-2.5 h-2.5 text-emerald-400 opacity-60 shrink-0" />
               ) : null}
               <span className="truncate">{ep.name}</span>
             </button>

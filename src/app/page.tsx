@@ -74,7 +74,7 @@ export default function HomePage() {
         />
       )}
 
-      <div className="relative z-10 -mt-10 sm:-mt-16 px-4 sm:px-6 lg:px-10 max-w-[1600px] mx-auto pb-12 space-y-2">
+      <div className="relative z-10 -mt-4 sm:-mt-14 px-4 sm:px-6 lg:px-10 max-w-[1600px] mx-auto pb-12 space-y-2">
         {itemsListFilm.map((item) => (
           <SliderListFilmSection
             key={item.slug}

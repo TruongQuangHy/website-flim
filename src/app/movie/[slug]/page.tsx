@@ -281,16 +281,16 @@ export default function MoviePage({ params }: MoviePageProps) {
     : null;
 
   return (
-    <div className="min-h-screen relative pb-16">
+    <div className="min-h-screen relative pb-16 overflow-x-clip">
       {/* Backdrop background blur */}
       {backdropUrl && (
-        <div className="absolute top-0 left-0 right-0 h-[55vh] overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-0 right-0 h-[45vh] sm:h-[55vh] overflow-hidden pointer-events-none">
           <Image
             src={backdropUrl}
             alt=""
             fill
             sizes="100vw"
-            className="object-cover object-top opacity-30 scale-105 blur-sm"
+            className="object-cover object-top opacity-30 blur-sm"
             aria-hidden
             priority
           />
@@ -389,7 +389,7 @@ export default function MoviePage({ params }: MoviePageProps) {
               )}
             </div>
 
-            <h1 className="font-black text-2xl sm:text-3xl md:text-4xl text-white tracking-tight">
+            <h1 className="font-black text-xl sm:text-3xl md:text-4xl text-white tracking-tight">
               {movieDetails.name}
             </h1>
 
@@ -520,7 +520,7 @@ export default function MoviePage({ params }: MoviePageProps) {
                       {movieDetails.category.map((cat) => (
                         <Link
                           key={cat.slug}
-                          href={`/danh-sach/the-loai/${cat.slug}`}
+                          href={`/the-loai/${cat.slug}`}
                           className="bg-white/10 hover:bg-white/20 text-white/90 px-2 py-0.5 rounded text-xs transition-colors"
                         >
                           {cat.name}
@@ -540,7 +540,7 @@ export default function MoviePage({ params }: MoviePageProps) {
                       {movieDetails.country.map((c) => (
                         <Link
                           key={c.slug}
-                          href={`/danh-sach/quoc-gia/${c.slug}`}
+                          href={`/quoc-gia/${c.slug}`}
                           className="bg-white/10 hover:bg-white/20 text-white/90 px-2 py-0.5 rounded text-xs transition-colors"
                         >
                           {c.name}

@@ -81,18 +81,18 @@ export default function CategorySlugPage({ params }: PageProps) {
     (totalItems > 0 ? Math.ceil(totalItems / itemsPerPage) : 1);
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10 py-8">
-      <div className="relative mb-10 overflow-hidden rounded-xl bg-gradient-to-r from-brand/20 via-[#1a1a1a] to-[#141414] border border-white/5 p-6 sm:p-8">
+    <div className="mx-auto max-w-[1600px] px-3.5 sm:px-6 lg:px-10 py-4 sm:py-8">
+      <div className="relative mb-6 sm:mb-10 overflow-hidden rounded-xl bg-gradient-to-r from-brand/20 via-[#1a1a1a] to-[#141414] border border-white/5 p-4 sm:p-8">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-brand/20 text-brand">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-brand/20 text-brand shrink-0">
             <Film className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-bold text-2xl sm:text-3xl tracking-tight">
+            <h1 className="font-bold text-xl sm:text-3xl tracking-tight">
               {listData.titlePage}
             </h1>
             {listData.pagination && (
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
                 {listData.pagination.totalItems.toLocaleString("vi-VN")} phim
               </p>
             )}
@@ -100,13 +100,13 @@ export default function CategorySlugPage({ params }: PageProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 justify-items-center sm:justify-items-stretch">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4">
         {listData.items.map((item) => (
           <MovieCard
             key={item._id}
             item={item}
             cdnImage={listData.appDomains.cdnImage}
-            className="w-full max-w-[220px] sm:max-w-none"
+            className="w-full"
           />
         ))}
       </div>

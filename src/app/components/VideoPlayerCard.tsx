@@ -170,6 +170,10 @@ function VideoPlayerCard({
     setReloadKey((prev) => prev + 1);
   };
 
+  const cleanServerName = serverName
+    ? serverName.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim()
+    : "";
+
   return (
     <>
       {/* Lights Off Overlay */}
@@ -187,14 +191,14 @@ function VideoPlayerCard({
           isLightsOff ? "relative z-50" : "relative"
         } ${
           isTheaterMode
-            ? "w-screen relative left-1/2 -translate-x-1/2 max-w-[1920px] px-2 sm:px-6"
+            ? "sm:w-screen sm:relative sm:left-1/2 sm:-translate-x-1/2 sm:max-w-[1920px] sm:px-6 w-full"
             : "w-full"
         }`}
       >
         {/* Ambient Glow Aura */}
         {ambientGlow && (
           <div
-            className="absolute -inset-2 sm:-inset-4 bg-gradient-to-r from-red-600/25 via-brand/20 to-amber-600/20 rounded-2xl blur-2xl sm:blur-3xl opacity-75 pointer-events-none -z-10 animate-pulse-slow"
+            className="absolute -inset-1 sm:-inset-4 bg-gradient-to-r from-red-600/20 via-brand/15 to-amber-600/15 rounded-xl sm:rounded-2xl blur-xl sm:blur-3xl opacity-70 pointer-events-none -z-10 animate-pulse-slow"
             aria-hidden
           />
         )}
@@ -226,107 +230,130 @@ function VideoPlayerCard({
         </div>
 
         {/* Cinematic Control Bar */}
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-white/70">
-          <div className="flex items-center gap-2">
-            {serverName && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/10 text-white font-medium">
-                <Tv className="w-3.5 h-3.5 text-brand" />
-                {serverName.trim()}
-              </span>
-            )}
-            {episodeName && (
-              <span className="font-semibold text-white px-2 py-1 rounded bg-brand/20 text-brand">
-                Tập: {episodeName}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1 sm:gap-2">
-            {/* Prev Episode */}
-            {hasPrevEpisode && onPrevEpisode && (
-              <button
-                type="button"
-                onClick={onPrevEpisode}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/15 hover:text-white transition-colors"
-                title="Tập trước"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Tập trước</span>
-              </button>
-            )}
-
-            {/* Next Episode */}
-            {hasNextEpisode && onNextEpisode && (
-              <button
-                type="button"
-                onClick={onNextEpisode}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/15 hover:text-white transition-colors"
-                title="Tập tiếp theo"
-              >
-                <span className="hidden sm:inline">Tập tiếp</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            )}
-
-            {/* Ambient Glow Toggle */}
-            <button
-              type="button"
-              onClick={() => setAmbientGlow(!ambientGlow)}
-              className={`p-1.5 rounded-lg transition-colors ${
-                ambientGlow
-                  ? "text-brand bg-brand/10 hover:bg-brand/20"
-                  : "bg-white/5 hover:bg-white/15 text-white/60 hover:text-white"
-              }`}
-              title={ambientGlow ? "Tắt đèn viền (Ambient)" : "Bật đèn viền (Ambient)"}
-            >
-              <Sparkles className="w-4 h-4" />
-            </button>
-
-            {/* Lights Off Mode */}
-            <button
-              type="button"
-              onClick={() => setIsLightsOff(!isLightsOff)}
-              className={`p-1.5 rounded-lg transition-colors ${
-                isLightsOff
-                  ? "text-yellow-400 bg-yellow-400/10"
-                  : "bg-white/5 hover:bg-white/15 text-white/60 hover:text-white"
-              }`}
-              title={isLightsOff ? "Bật lại đèn (Esc)" : "Tắt đèn rạp phim"}
-            >
-              {isLightsOff ? (
-                <LightbulbOff className="w-4 h-4" />
-              ) : (
-                <Lightbulb className="w-4 h-4" />
+        <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 px-0.5 text-xs text-white/70">
+          <div className="flex items-center justify-between sm:justify-start gap-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {cleanServerName && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/10 text-white font-medium text-[11px] sm:text-xs">
+                  <Tv className="w-3.5 h-3.5 text-brand shrink-0" />
+                  <span className="truncate max-w-[140px] sm:max-w-none">
+                    {cleanServerName}
+                  </span>
+                </span>
               )}
-            </button>
-
-            {/* Theater Mode */}
-            <button
-              type="button"
-              onClick={() => setIsTheaterMode(!isTheaterMode)}
-              className={`p-1.5 rounded-lg transition-colors ${
-                isTheaterMode
-                  ? "text-brand bg-brand/10"
-                  : "bg-white/5 hover:bg-white/15 text-white/60 hover:text-white"
-              }`}
-              title={isTheaterMode ? "Thu nhỏ về mặc định" : "Mở rộng rạp phim (Theater Mode)"}
-            >
-              {isTheaterMode ? (
-                <Minimize2 className="w-4 h-4" />
-              ) : (
-                <Maximize2 className="w-4 h-4" />
+              {episodeName && (
+                <span className="font-semibold text-white px-2 py-1 rounded bg-brand/20 text-brand text-[11px] sm:text-xs">
+                  Tập: {episodeName}
+                </span>
               )}
-            </button>
+            </div>
 
-            {/* Reload Player */}
+            {/* Mobile reload button */}
             <button
               type="button"
               onClick={handleReload}
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-white/60 hover:text-white transition-colors"
+              className="sm:hidden p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-white/70 hover:text-white transition-colors"
               title="Tải lại trình phát khi bị giật lag"
+              aria-label="Tải lại trình phát"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
+          </div>
+
+          <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-1.5">
+              {/* Prev Episode */}
+              {hasPrevEpisode && onPrevEpisode && (
+                <button
+                  type="button"
+                  onClick={onPrevEpisode}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/15 hover:text-white transition-colors text-[11px] sm:text-xs font-medium"
+                  title="Tập trước"
+                >
+                  <ChevronLeft className="w-4 h-4 shrink-0" />
+                  <span>Tập trước</span>
+                </button>
+              )}
+
+              {/* Next Episode */}
+              {hasNextEpisode && onNextEpisode && (
+                <button
+                  type="button"
+                  onClick={onNextEpisode}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/15 hover:text-white transition-colors text-[11px] sm:text-xs font-medium"
+                  title="Tập tiếp theo"
+                >
+                  <span>Tập tiếp</span>
+                  <ChevronRight className="w-4 h-4 shrink-0" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1 sm:gap-1.5 ml-auto sm:ml-0">
+              {/* Ambient Glow Toggle */}
+              <button
+                type="button"
+                onClick={() => setAmbientGlow(!ambientGlow)}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  ambientGlow
+                    ? "text-brand bg-brand/10 hover:bg-brand/20"
+                    : "bg-white/5 hover:bg-white/15 text-white/60 hover:text-white"
+                }`}
+                title={ambientGlow ? "Tắt đèn viền (Ambient)" : "Bật đèn viền (Ambient)"}
+                aria-label="Đèn viền"
+              >
+                <Sparkles className="w-4 h-4" />
+              </button>
+
+              {/* Lights Off Mode */}
+              <button
+                type="button"
+                onClick={() => setIsLightsOff(!isLightsOff)}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  isLightsOff
+                    ? "text-yellow-400 bg-yellow-400/10"
+                    : "bg-white/5 hover:bg-white/15 text-white/60 hover:text-white"
+                }`}
+                title={isLightsOff ? "Bật lại đèn (Esc)" : "Tắt đèn rạp phim"}
+                aria-label="Tắt đèn"
+              >
+                {isLightsOff ? (
+                  <LightbulbOff className="w-4 h-4" />
+                ) : (
+                  <Lightbulb className="w-4 h-4" />
+                )}
+              </button>
+
+              {/* Theater Mode (Desktop only) */}
+              <button
+                type="button"
+                onClick={() => setIsTheaterMode(!isTheaterMode)}
+                className={`hidden sm:inline-flex p-1.5 rounded-lg transition-colors ${
+                  isTheaterMode
+                    ? "text-brand bg-brand/10"
+                    : "bg-white/5 hover:bg-white/15 text-white/60 hover:text-white"
+                }`}
+                title={isTheaterMode ? "Thu nhỏ về mặc định" : "Mở rộng rạp phim (Theater Mode)"}
+                aria-label="Mở rộng rạp phim"
+              >
+                {isTheaterMode ? (
+                  <Minimize2 className="w-4 h-4" />
+                ) : (
+                  <Maximize2 className="w-4 h-4" />
+                )}
+              </button>
+
+              {/* Desktop reload button */}
+              <button
+                type="button"
+                onClick={handleReload}
+                className="hidden sm:inline-flex p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-white/60 hover:text-white transition-colors"
+                title="Tải lại trình phát khi bị giật lag"
+                aria-label="Tải lại trình phát"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

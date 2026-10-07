@@ -26,10 +26,15 @@ export default function MovieCard({
     ? Number(item.tmdb.vote_average).toFixed(1)
     : null;
 
+  const isCustomWidth = className.includes("w-");
+  const defaultWidthClass = isCustomWidth
+    ? ""
+    : "w-[135px] sm:w-[160px] md:w-[180px] lg:w-[200px] flex-shrink-0";
+
   return (
     <Link
       href={`/movie/${item.slug}`}
-      className={`group relative block flex-shrink-0 w-[140px] sm:w-[160px] md:w-[180px] lg:w-[200px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-xl overflow-hidden ${className}`}
+      className={`group relative block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-xl overflow-hidden ${defaultWidthClass} ${className}`}
     >
       <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-[#141414] ring-1 ring-white/10 group-hover:ring-brand/50 transition-all duration-300 shadow-lg shadow-black/60 group-hover:shadow-2xl group-hover:shadow-brand/20 group-hover:scale-[1.04]">
         {imageUrl ? (

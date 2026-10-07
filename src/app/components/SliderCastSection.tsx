@@ -22,7 +22,7 @@ export default function SliderCastSection({ actors }: SliderCastSectionProps) {
         ref={prevRef}
         type="button"
         aria-label="Diễn viên trước"
-        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-9 h-9 rounded-full bg-black/70 border border-white/15 hover:bg-brand hover:border-brand opacity-0 group-hover/cast:opacity-100 transition-all"
+        className="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 items-center justify-center w-9 h-9 rounded-full bg-black/70 border border-white/15 hover:bg-brand hover:border-brand opacity-0 group-hover/cast:opacity-100 transition-all"
       >
         <ChevronLeft className="text-white w-5 h-5" />
       </button>
@@ -31,7 +31,7 @@ export default function SliderCastSection({ actors }: SliderCastSectionProps) {
         ref={nextRef}
         type="button"
         aria-label="Diễn viên sau"
-        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-9 h-9 rounded-full bg-black/70 border border-white/15 hover:bg-brand hover:border-brand opacity-0 group-hover/cast:opacity-100 transition-all"
+        className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 items-center justify-center w-9 h-9 rounded-full bg-black/70 border border-white/15 hover:bg-brand hover:border-brand opacity-0 group-hover/cast:opacity-100 transition-all"
       >
         <ChevronRight className="text-white w-5 h-5" />
       </button>
@@ -40,11 +40,12 @@ export default function SliderCastSection({ actors }: SliderCastSectionProps) {
         spaceBetween={12}
         modules={[Navigation]}
         breakpoints={{
-          0: { slidesPerView: 2.4 },
-          480: { slidesPerView: 3.2 },
-          640: { slidesPerView: 4.2 },
-          768: { slidesPerView: 5.2 },
-          1024: { slidesPerView: 6.2 },
+          0: { slidesPerView: 2.3, spaceBetween: 10 },
+          380: { slidesPerView: 2.8, spaceBetween: 10 },
+          480: { slidesPerView: 3.2, spaceBetween: 12 },
+          640: { slidesPerView: 4.2, spaceBetween: 12 },
+          768: { slidesPerView: 5.2, spaceBetween: 12 },
+          1024: { slidesPerView: 6.2, spaceBetween: 12 },
         }}
         onInit={(swiper) => {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
