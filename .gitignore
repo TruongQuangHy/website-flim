@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# mobile & android build artifacts
+/mobile/node_modules/
+/mobile/android/
+*.apk
+android/
