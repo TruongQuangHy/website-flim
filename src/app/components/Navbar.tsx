@@ -8,13 +8,20 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { SearchBar } from "./SearchBar";
-import { Menu, X } from "lucide-react";
+import { Menu, X, History, User, LogOut } from "lucide-react";
+import { useUserHistoryStore } from "../store/useUserHistoryStore";
+import { LoginModal } from "./LoginModal";
 
 const Navbar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
+
+  const { user, logout, history } = useUserHistoryStore();
+  const watchingCount = Object.values(history).filter((i) => !i.isCompleted).length;
 
   const navItems: NavItem[] = [
     { name: "Thể loại", slug: "the-loai" },
@@ -96,7 +103,79 @@ const Navbar: React.FC = () => {
             </div>
           </div>
 
-          <SearchBar />
+          <div className="flex items-center gap-3">
+            <SearchBar />
+
+            {/* Desktop User Hai Yen / Login */}
+            {user?.isLoggedIn ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full bg-white/10 hover:bg-white/15 border border-brand/30 text-white transition-all text-xs font-medium"
+                >
+                  <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-brand to-pink-500 flex items-center justify-center text-white text-[10px] font-bold">
+                    HY
+                  </span>
+                  <span className="font-semibold text-white">Hải Yến</span>
+                  {watchingCount > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-brand text-[10px] font-bold flex items-center justify-center text-white">
+                      {watchingCount}
+                    </span>
+                  )}
+                </button>
+
+                {isUserMenuOpen && (
+                  <div
+                    className="absolute right-0 mt-2 w-56 bg-[#16181f] border border-white/10 rounded-xl shadow-2xl py-2 z-50 animate-scaleUp"
+                    onMouseLeave={() => setIsUserMenuOpen(false)}
+                  >
+                    <div className="px-3.5 py-2 border-b border-white/10">
+                      <p className="text-xs font-semibold text-white">Hải Yến</p>
+                      <p className="text-[11px] text-white/50">VIP Member • haiyen</p>
+                    </div>
+
+                    <Link
+                      href="/lich-su"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center justify-between px-3.5 py-2 text-xs text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                      <span className="flex items-center gap-2">
+                        <History className="w-4 h-4 text-brand" />
+                        Lịch sử xem phim
+                      </span>
+                      {watchingCount > 0 && (
+                        <span className="px-1.5 py-0.5 rounded bg-brand/20 text-brand text-[10px] font-semibold">
+                          {watchingCount} đang xem
+                        </span>
+                      )}
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        logout();
+                        setIsUserMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3.5 py-2 text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Đăng xuất
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsLoginModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand hover:bg-brand/90 text-white font-medium text-xs shadow-md shadow-brand/20 transition-all active:scale-95"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Đăng nhập</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Mobile Navbar Bar */}
@@ -125,7 +204,27 @@ const Navbar: React.FC = () => {
             <span className="text-brand font-bold text-lg">HyFlim</span>
           </Link>
 
-          <SearchBar />
+          <div className="flex items-center gap-1.5">
+            {user?.isLoggedIn ? (
+              <Link
+                href="/lich-su"
+                className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand to-pink-500 flex items-center justify-center text-white text-[11px] font-bold shadow-md"
+                title="Lịch sử xem của Hải Yến"
+              >
+                HY
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsLoginModalOpen(true)}
+                className="p-1.5 rounded-lg bg-white/10 text-white"
+                title="Đăng nhập Hải Yến"
+              >
+                <User className="w-4 h-4" />
+              </button>
+            )}
+            <SearchBar />
+          </div>
         </div>
       </nav>
 
@@ -170,6 +269,64 @@ const Navbar: React.FC = () => {
 
               {/* Drawer Nav Items */}
               <div className="p-4 flex-1 overflow-y-auto">
+                {/* Mobile User Status Card */}
+                <div className="mb-4 p-3 rounded-xl bg-white/5 border border-white/10">
+                  {user?.isLoggedIn ? (
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand to-pink-500 flex items-center justify-center text-white text-xs font-bold">
+                            HY
+                          </span>
+                          <div>
+                            <p className="text-xs font-bold text-white">Hải Yến</p>
+                            <p className="text-[10px] text-white/50">VIP Member</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            logout();
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className="p-1.5 text-xs text-red-400 hover:text-red-300"
+                          title="Đăng xuất"
+                        >
+                          <LogOut className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <Link
+                        href="/lich-su"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="mt-3 flex items-center justify-between px-3 py-2 rounded-lg bg-brand/20 text-brand text-xs font-semibold"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <History className="w-3.5 h-3.5" />
+                          Lịch sử xem phim
+                        </span>
+                        <span>{watchingCount} đang xem</span>
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="text-center py-1">
+                      <p className="text-xs text-white/70 mb-2">
+                        Đăng nhập tài khoản Hải Yến để lưu lịch sử
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          setIsLoginModalOpen(true);
+                        }}
+                        className="w-full py-2 px-3 rounded-lg bg-brand hover:bg-brand/90 text-white text-xs font-semibold shadow-md shadow-brand/20"
+                      >
+                        Đăng nhập Hải Yến
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex flex-col gap-1 mb-4">
                   {quickLinks.map((link) => (
                     <Link
@@ -181,6 +338,23 @@ const Navbar: React.FC = () => {
                       {link.name}
                     </Link>
                   ))}
+                  {user?.isLoggedIn && (
+                    <Link
+                      href="/lich-su"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="px-3 py-2.5 text-brand bg-brand/10 hover:bg-brand/20 rounded-lg transition-colors font-semibold text-sm flex items-center justify-between"
+                    >
+                      <span className="flex items-center gap-2">
+                        <History className="w-4 h-4" />
+                        Lịch sử xem phim
+                      </span>
+                      {watchingCount > 0 && (
+                        <span className="text-xs bg-brand text-white px-1.5 py-0.5 rounded-full">
+                          {watchingCount}
+                        </span>
+                      )}
+                    </Link>
+                  )}
                 </div>
 
                 <div className="border-t border-white/10 pt-2 flex flex-col">
@@ -203,6 +377,12 @@ const Navbar: React.FC = () => {
           </div>,
           document.body
         )}
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+      />
     </>
   );
 };

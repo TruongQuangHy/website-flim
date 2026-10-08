@@ -70,3 +70,34 @@ export interface MovieDetailResponse {
   movie: MovieItem;
   episodes: EpisodeServer[];
 }
+
+export interface UserSession {
+  username: string; // 'haiyen'
+  name: string; // 'Hải Yến'
+  isLoggedIn: boolean;
+  lastLogin?: number;
+}
+
+export interface WatchProgressItem {
+  movieSlug: string;
+  movieName: string;
+  originName?: string;
+  posterUrl: string;
+  quality?: string;
+  year?: string | number;
+
+  // Episode tracking
+  lastEpisodeSlug: string;
+  lastEpisodeName: string;
+  lastPositionSeconds: number;
+  durationSeconds: number;
+  progressPercent: number;
+
+  // Total and completed episodes tracking
+  totalEpisodes?: number;
+  watchedEpisodes: string[];
+  isCompleted: boolean;
+
+  updatedAt: number;
+}
+

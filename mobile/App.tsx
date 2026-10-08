@@ -19,12 +19,17 @@ import { HomeScreen } from './src/screens/HomeScreen';
 import { MovieDetailScreen } from './src/screens/MovieDetailScreen';
 import { SearchScreen } from './src/screens/SearchScreen';
 import { CategoryScreen } from './src/screens/CategoryScreen';
+import { HistoryScreen } from './src/screens/HistoryScreen';
 
-type TabType = 'home' | 'series' | 'movies' | 'search';
+type TabType = 'home' | 'series' | 'movies' | 'history' | 'search';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [selectedMovie, setSelectedMovie] = useState<MovieItem | null>(null);
+  const [resumeParams, setResumeParams] = useState<{
+    initialEpisodeSlug?: string;
+    initialSeekTime?: number;
+  } | null>(null);
   const [activeCategory, setActiveCategory] = useState<{
     slug: string;
     title: string;
@@ -40,6 +45,7 @@ export default function App() {
       }
       if (selectedMovie) {
         setSelectedMovie(null);
+        setResumeParams(null);
         return true;
       }
       if (activeCategory) {
@@ -62,7 +68,24 @@ export default function App() {
   }, [isVideoFullscreen, selectedMovie, activeCategory, activeTab]);
 
   const handleSelectMovie = (movie: MovieItem) => {
+    setResumeParams(null);
     setSelectedMovie(movie);
+  };
+
+  const handleSelectMovieFromHistory = (
+    movieSlug: string,
+    initialEpisodeSlug?: string,
+    initialSeekTime?: number
+  ) => {
+    setResumeParams({ initialEpisodeSlug, initialSeekTime });
+    setSelectedMovie({
+      _id: movieSlug,
+      slug: movieSlug,
+      name: 'Đang tải...',
+      origin_name: '',
+      thumb_url: '',
+      poster_url: '',
+    });
   };
 
   const handleSeeAll = (slug: string, title: string) => {
@@ -72,6 +95,7 @@ export default function App() {
   const handleBack = () => {
     if (selectedMovie) {
       setSelectedMovie(null);
+      setResumeParams(null);
       return;
     }
     if (activeCategory) {
@@ -86,6 +110,8 @@ export default function App() {
       return (
         <MovieDetailScreen
           movie={selectedMovie}
+          initialEpisodeSlug={resumeParams?.initialEpisodeSlug}
+          initialSeekTime={resumeParams?.initialSeekTime}
           onSelectMovie={handleSelectMovie}
           onBack={handleBack}
           onFullscreenChange={setIsVideoFullscreen}
@@ -127,6 +153,8 @@ export default function App() {
             onSelectMovie={handleSelectMovie}
           />
         );
+      case 'history':
+        return <HistoryScreen onSelectMovie={handleSelectMovieFromHistory} />;
       case 'search':
         return <SearchScreen onSelectMovie={handleSelectMovie} />;
       default:
@@ -166,6 +194,13 @@ export default function App() {
     if (activeTab === 'movies') {
       return {
         title: 'Phim Lẻ',
+        showSearch: true,
+        onSearchPress: () => setActiveTab('search'),
+      };
+    }
+    if (activeTab === 'history') {
+      return {
+        title: 'Lịch Sử Xem Phim',
         showSearch: true,
         onSearchPress: () => setActiveTab('search'),
       };
@@ -277,6 +312,33 @@ export default function App() {
                 ]}
               >
                 Phim lẻ
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.tabItem}
+              onPress={() => {
+                setActiveCategory(null);
+                setActiveTab('history');
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={activeTab === 'history' ? 'time' : 'time-outline'}
+                size={22}
+                color={
+                  activeTab === 'history'
+                    ? THEME.colors.primary
+                    : THEME.colors.textMuted
+                }
+              />
+              <Text
+                style={[
+                  styles.tabLabel,
+                  activeTab === 'history' && styles.tabLabelActive,
+                ]}
+              >
+                Lịch sử
               </Text>
             </TouchableOpacity>
 

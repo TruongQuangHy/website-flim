@@ -23,9 +23,11 @@ interface VideoPlayerProps {
   currentEpisode: EpisodeData | null;
   servers: EpisodeServer[];
   activeServerIndex: number;
+  initialSeekTime?: number;
   onServerChange: (index: number) => void;
   onReload?: () => void;
   onFullscreenChange?: (isFs: boolean) => void;
+  onTimeUpdate?: (position: number, duration: number) => void;
 }
 
 // Injected JavaScript inside the video embed page:
@@ -220,6 +222,32 @@ const INJECTED_JAVASCRIPT = `
     }
   };
 
+  // 3. Auto-seek and periodic time reporting
+  var hasSeeked = false;
+  function checkJWPlayer() {
+    try {
+      var p = (window.jwplayer && window.jwplayer('player')) || window.playerInstance;
+      if (p && typeof p.getPosition === 'function') {
+        var pos = p.getPosition() || 0;
+        var dur = p.getDuration() || 0;
+
+        if (!hasSeeked && window.__targetSeekTime && window.__targetSeekTime > 5 && dur > 10) {
+          p.seek(window.__targetSeekTime);
+          hasSeeked = true;
+        }
+
+        if (pos > 0 && dur > 0) {
+          sendToNative({
+            type: 'timeUpdate',
+            position: Math.floor(pos),
+            duration: Math.floor(dur)
+          });
+        }
+      }
+    } catch(err) {}
+  }
+  setInterval(checkJWPlayer, 4000);
+
   true;
 })();
 `;
@@ -228,8 +256,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   currentEpisode,
   servers,
   activeServerIndex,
+  initialSeekTime,
   onServerChange,
+  onReload,
   onFullscreenChange,
+  onTimeUpdate,
 }) => {
   const [loading, setLoading] = useState(true);
   const [key, setKey] = useState(0);
@@ -335,10 +366,43 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           exitFullscreen();
         } else if (data.type === 'toggleFullscreen') {
           toggleFullscreen();
+        } else if (data.type === 'timeUpdate') {
+          onTimeUpdate?.(data.position, data.duration);
         }
       }
     } catch (e) {
       // Non-JSON message, ignore
+    }
+  };
+
+  useEffect(() => {
+    if (initialSeekTime && initialSeekTime > 0) {
+      webViewRef.current?.injectJavaScript(`
+        window.__targetSeekTime = ${initialSeekTime};
+        try {
+          var p = (window.jwplayer && window.jwplayer('player')) || window.playerInstance;
+          if (p && typeof p.seek === 'function') {
+            p.seek(${initialSeekTime});
+          }
+        } catch(e) {}
+        true;
+      `);
+    }
+  }, [initialSeekTime, key]);
+
+  const handleLoadEnd = () => {
+    setLoading(false);
+    if (initialSeekTime && initialSeekTime > 0) {
+      webViewRef.current?.injectJavaScript(`
+        window.__targetSeekTime = ${initialSeekTime};
+        try {
+          var p = (window.jwplayer && window.jwplayer('player')) || window.playerInstance;
+          if (p && typeof p.seek === 'function') {
+            p.seek(${initialSeekTime});
+          }
+        } catch(e) {}
+        true;
+      `);
     }
   };
 
@@ -389,7 +453,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             injectedJavaScript={INJECTED_JAVASCRIPT}
             onMessage={handleMessage}
             onLoadStart={() => setLoading(true)}
-            onLoadEnd={() => setLoading(false)}
+            onLoadEnd={handleLoadEnd}
             originWhitelist={['*']}
             setSupportMultipleWindows={false}
             nestedScrollEnabled={false}

@@ -26,7 +26,7 @@ interface VideoPlayerCardProps {
   hasNextEpisode?: boolean;
   onPrevEpisode?: () => void;
   onNextEpisode?: () => void;
-  onTimeUpdate?: (currentTime: number) => void;
+  onTimeUpdate?: (currentTime: number, duration?: number) => void;
   resumeTime?: number;
 }
 
@@ -99,7 +99,7 @@ function VideoPlayerCard({
         );
 
         if (onTimeUpdate) {
-          onTimeUpdate(currentTime);
+          onTimeUpdate(currentTime, duration);
         }
       }
     };

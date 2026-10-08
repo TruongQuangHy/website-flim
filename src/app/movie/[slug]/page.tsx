@@ -17,7 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -30,7 +30,11 @@ import {
   Check,
   Film,
   Sparkles,
+  Heart,
+  RotateCcw,
+  X,
 } from "lucide-react";
+import { useUserHistoryStore } from "@/app/store/useUserHistoryStore";
 
 interface MoviePageProps {
   params: Promise<{
@@ -60,6 +64,10 @@ export default function MoviePage({ params }: MoviePageProps) {
   const [showResumeDialog, setShowResumeDialog] = useState(false);
   const [savedProgress, setSavedProgress] = useState<WatchProgress | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [resumeNotice, setResumeNotice] = useState<string | null>(null);
+
+  const { user, history, saveProgress } = useUserHistoryStore();
+  const currentPosRef = useRef<number>(0);
 
   useEffect(() => {
     params.then((resolvedParams) => {
@@ -81,15 +89,39 @@ export default function MoviePage({ params }: MoviePageProps) {
         setMovieDetails(item);
         setCdnImage(cdn);
 
-        // Pick first episode
+        // Pick episode: Check if user Hai Yen has history for this movie
+        const movieHistory = user?.isLoggedIn ? history[slug] : null;
         const firstServer = item.episodes?.[0];
-        const firstEpisode = firstServer?.server_data?.[0];
-        if (firstEpisode) {
-          const videoSrc = firstEpisode.link_embed || firstEpisode.link_m3u8 || "";
+        let targetEpisode: VsmovEpisodeItem | undefined;
+
+        if (movieHistory?.lastEpisodeSlug && firstServer?.server_data?.length) {
+          targetEpisode = firstServer.server_data.find(
+            (ep) => ep.slug === movieHistory.lastEpisodeSlug
+          );
+        }
+
+        if (!targetEpisode) {
+          targetEpisode = firstServer?.server_data?.[0];
+        }
+
+        if (targetEpisode) {
+          const videoSrc = targetEpisode.link_embed || targetEpisode.link_m3u8 || "";
           setCurrentVideo(videoSrc);
-          setSelectedEpisodeSlug(firstEpisode.slug);
-          setSelectedEpisodeName(firstEpisode.name);
-          checkSavedProgress(slug, firstEpisode.slug);
+          setSelectedEpisodeSlug(targetEpisode.slug);
+          setSelectedEpisodeName(targetEpisode.name);
+
+          if (movieHistory && movieHistory.lastPositionSeconds > 10) {
+            setResumeTime(movieHistory.lastPositionSeconds);
+            currentPosRef.current = movieHistory.lastPositionSeconds;
+            const mins = Math.floor(movieHistory.lastPositionSeconds / 60);
+            const secs = Math.floor(movieHistory.lastPositionSeconds % 60);
+            const timeStr = `${mins}:${secs.toString().padStart(2, "0")}`;
+            setResumeNotice(
+              `✨ Chào Hải Yến! Đang tự động mở ${targetEpisode.name} từ đoạn xem dở (${timeStr}).`
+            );
+          } else {
+            checkSavedProgress(slug, targetEpisode.slug);
+          }
         }
 
         // Fetch cast / crew
@@ -184,14 +216,98 @@ export default function MoviePage({ params }: MoviePageProps) {
     episodeName?: string
   ) => {
     setResumeTime(0);
+    currentPosRef.current = 0;
     setSavedProgress(null);
     setCurrentVideo(episodeLink);
     setSelectedEpisodeSlug(episodeSlug);
     if (episodeName) setSelectedEpisodeName(episodeName);
+    setResumeNotice(null);
+
+    if (user?.isLoggedIn && movieDetails) {
+      saveProgress({
+        movieSlug: slug,
+        movieName: movieDetails.name,
+        originName: movieDetails.origin_name,
+        posterUrl: getMovieImageUrl(movieDetails, cdnImage),
+        quality: movieDetails.quality,
+        year: movieDetails.year,
+        lastEpisodeSlug: episodeSlug,
+        lastEpisodeName: episodeName || "Tập",
+        lastPositionSeconds: 0,
+        durationSeconds: 2700,
+        totalEpisodes: allCurrentEpisodes.length || 1,
+      });
+    }
 
     setTimeout(() => {
       checkSavedProgress(slug, episodeSlug);
     }, 100);
+  };
+
+  // Periodic watch progress tracking for Hai Yen
+  useEffect(() => {
+    if (!user?.isLoggedIn || !movieDetails || !selectedEpisodeSlug) return;
+
+    const currentEpName = selectedEpisodeName || "Tập 1";
+    const totalEps = allCurrentEpisodes.length || 1;
+    const existing = history[slug];
+    const initialPos =
+      existing?.lastEpisodeSlug === selectedEpisodeSlug
+        ? existing.lastPositionSeconds
+        : currentPosRef.current;
+    const initialDuration = existing?.durationSeconds || 2700;
+
+    saveProgress({
+      movieSlug: slug,
+      movieName: movieDetails.name,
+      originName: movieDetails.origin_name,
+      posterUrl: getMovieImageUrl(movieDetails, cdnImage),
+      quality: movieDetails.quality,
+      year: movieDetails.year,
+      lastEpisodeSlug: selectedEpisodeSlug,
+      lastEpisodeName: currentEpName,
+      lastPositionSeconds: initialPos,
+      durationSeconds: initialDuration,
+      totalEpisodes: totalEps,
+    });
+
+    const interval = setInterval(() => {
+      currentPosRef.current += 10;
+      saveProgress({
+        movieSlug: slug,
+        movieName: movieDetails.name,
+        originName: movieDetails.origin_name,
+        posterUrl: getMovieImageUrl(movieDetails, cdnImage),
+        quality: movieDetails.quality,
+        year: movieDetails.year,
+        lastEpisodeSlug: selectedEpisodeSlug,
+        lastEpisodeName: currentEpName,
+        lastPositionSeconds: currentPosRef.current,
+        durationSeconds: initialDuration,
+        totalEpisodes: totalEps,
+      });
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [user?.isLoggedIn, movieDetails?.name, selectedEpisodeSlug, selectedEpisodeName]);
+
+  const handleTimeUpdate = (currentTime: number, duration?: number) => {
+    currentPosRef.current = Math.floor(currentTime);
+    if (user?.isLoggedIn && movieDetails && selectedEpisodeSlug) {
+      saveProgress({
+        movieSlug: slug,
+        movieName: movieDetails.name,
+        originName: movieDetails.origin_name,
+        posterUrl: getMovieImageUrl(movieDetails, cdnImage),
+        quality: movieDetails.quality,
+        year: movieDetails.year,
+        lastEpisodeSlug: selectedEpisodeSlug,
+        lastEpisodeName: selectedEpisodeName || "Tập",
+        lastPositionSeconds: Math.floor(currentTime),
+        durationSeconds: duration ? Math.floor(duration) : 2700,
+        totalEpisodes: allCurrentEpisodes.length || 1,
+      });
+    }
   };
 
   const handleResume = () => {
@@ -330,6 +446,40 @@ export default function MoviePage({ params }: MoviePageProps) {
           </AlertDialogContent>
         </AlertDialog>
 
+        {/* Hai Yen Auto-Resume Banner */}
+        {resumeNotice && (
+          <div className="mb-4 p-3.5 rounded-xl bg-gradient-to-r from-brand/20 via-pink-500/15 to-brand/10 border border-brand/40 flex items-center justify-between gap-3 text-xs sm:text-sm text-white animate-fadeIn shadow-lg">
+            <div className="flex items-center gap-2.5">
+              <span className="w-7 h-7 rounded-lg bg-brand text-white flex items-center justify-center shrink-0">
+                <Heart className="w-4 h-4 fill-white" />
+              </span>
+              <span>{resumeNotice}</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setResumeTime(0);
+                  currentPosRef.current = 0;
+                  setResumeNotice(null);
+                }}
+                className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white/90 text-xs font-medium flex items-center gap-1 transition-colors"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Xem từ đầu</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setResumeNotice(null)}
+                className="p-1 rounded-lg hover:bg-white/10 text-white/60 hover:text-white"
+                aria-label="Đóng thông báo"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Video Player */}
         {currentVideo ? (
           <div className="w-full mb-6">
@@ -344,6 +494,7 @@ export default function MoviePage({ params }: MoviePageProps) {
               onPrevEpisode={handlePrevEpisode}
               onNextEpisode={handleNextEpisode}
               resumeTime={resumeTime}
+              onTimeUpdate={handleTimeUpdate}
             />
           </div>
         ) : (

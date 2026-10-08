@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   ScrollView,
   View,
@@ -15,9 +15,12 @@ import { VideoPlayer } from '../components/VideoPlayer';
 import { EpisodePicker } from '../components/EpisodePicker';
 import { MovieSection } from '../components/MovieSection';
 import { MovieDetailSkeleton } from '../components/SkeletonLoader';
+import { historyStorage } from '../services/historyStorage';
 
 interface MovieDetailScreenProps {
   movie: MovieItem;
+  initialEpisodeSlug?: string;
+  initialSeekTime?: number;
   onSelectMovie: (movie: MovieItem) => void;
   onBack: () => void;
   onFullscreenChange?: (isFs: boolean) => void;
@@ -25,6 +28,8 @@ interface MovieDetailScreenProps {
 
 export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
   movie: initialMovie,
+  initialEpisodeSlug,
+  initialSeekTime,
   onSelectMovie,
   onBack,
   onFullscreenChange,
@@ -37,6 +42,15 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
   const [currentEpisode, setCurrentEpisode] = useState<EpisodeData | null>(null);
   const [relatedMovies, setRelatedMovies] = useState<MovieItem[]>([]);
   const [showFullContent, setShowFullContent] = useState(false);
+  const [seekTime, setSeekTime] = useState<number>(initialSeekTime || 0);
+  const [resumeNotice, setResumeNotice] = useState<string | null>(null);
+
+  const formatSeconds = (sec: number) => {
+    if (!sec || isNaN(sec)) return '00:00';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -49,9 +63,40 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
           const srvList = fullDetail.episodes || [];
           setServers(srvList);
 
-          // Auto-select first episode of first server
-          if (srvList.length > 0 && srvList[0].server_data.length > 0) {
-            setCurrentEpisode(srvList[0].server_data[0]);
+          // Check if Hai Yen has watch history for this movie
+          let targetEpisode: EpisodeData | undefined;
+          let targetSeek = initialSeekTime || 0;
+
+          try {
+            const userSession = await historyStorage.getUserSession();
+            if (userSession?.isLoggedIn) {
+              const hist = await historyStorage.getWatchHistory();
+              const saved = hist[initialMovie.slug];
+
+              const epSlugToFind = initialEpisodeSlug || saved?.lastEpisodeSlug;
+              if (epSlugToFind && srvList.length > 0) {
+                targetEpisode = srvList[0].server_data.find((e) => e.slug === epSlugToFind);
+              }
+              if (!targetSeek && saved?.lastPositionSeconds) {
+                targetSeek = saved.lastPositionSeconds;
+              }
+            }
+          } catch (e) {
+            console.error('Failed to read history:', e);
+          }
+
+          if (!targetEpisode && srvList.length > 0 && srvList[0].server_data.length > 0) {
+            targetEpisode = srvList[0].server_data[0];
+          }
+
+          if (targetEpisode) {
+            setCurrentEpisode(targetEpisode);
+            if (targetSeek > 10) {
+              setSeekTime(targetSeek);
+              setResumeNotice(
+                `✨ Chào Hải Yến! Đang mở tiếp ${targetEpisode.name} từ ${formatSeconds(targetSeek)}.`
+              );
+            }
           }
         }
 
@@ -82,7 +127,7 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [initialMovie.slug]);
+  }, [initialMovie.slug, initialEpisodeSlug, initialSeekTime]);
 
   const handleServerChange = (idx: number) => {
     setActiveServerIndex(idx);
@@ -98,7 +143,49 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
 
   const handleEpisodeSelect = (ep: EpisodeData) => {
     setCurrentEpisode(ep);
+    setSeekTime(0);
+    setResumeNotice(null);
+
+    const srv = servers[activeServerIndex] || servers[0];
+    const totalCount = srv?.server_data?.length || 1;
+
+    historyStorage.saveWatchProgress({
+      movieSlug: movieDetail.slug,
+      movieName: movieDetail.name,
+      originName: movieDetail.origin_name,
+      posterUrl: movieDetail.poster_url || movieDetail.thumb_url || '',
+      quality: movieDetail.quality,
+      year: movieDetail.year,
+      lastEpisodeSlug: ep.slug,
+      lastEpisodeName: ep.name,
+      lastPositionSeconds: 0,
+      durationSeconds: 2700,
+      totalEpisodes: totalCount,
+    });
   };
+
+  const handleTimeUpdate = useCallback(
+    (position: number, duration: number) => {
+      if (!currentEpisode || !movieDetail) return;
+      const srv = servers[activeServerIndex] || servers[0];
+      const totalCount = srv?.server_data?.length || 1;
+
+      historyStorage.saveWatchProgress({
+        movieSlug: movieDetail.slug,
+        movieName: movieDetail.name,
+        originName: movieDetail.origin_name,
+        posterUrl: movieDetail.poster_url || movieDetail.thumb_url || '',
+        quality: movieDetail.quality,
+        year: movieDetail.year,
+        lastEpisodeSlug: currentEpisode.slug,
+        lastEpisodeName: currentEpisode.name,
+        lastPositionSeconds: position,
+        durationSeconds: duration,
+        totalEpisodes: totalCount,
+      });
+    },
+    [currentEpisode, movieDetail, servers, activeServerIndex]
+  );
 
   const currentServer = servers[activeServerIndex];
   const episodeList = currentServer ? currentServer.server_data : [];
@@ -124,12 +211,30 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
         currentEpisode={currentEpisode}
         servers={servers}
         activeServerIndex={activeServerIndex}
+        initialSeekTime={seekTime}
+        onTimeUpdate={handleTimeUpdate}
         onServerChange={handleServerChange}
         onFullscreenChange={(isFs) => {
           setIsPlayerFullscreen(isFs);
           onFullscreenChange?.(isFs);
         }}
       />
+
+      {/* Auto-Resume Notification for Hai Yen */}
+      {!isPlayerFullscreen && resumeNotice && (
+        <View style={styles.resumeNoticeCard}>
+          <Ionicons name="heart" size={15} color={THEME.colors.primary} />
+          <Text style={styles.resumeNoticeText} numberOfLines={2}>
+            {resumeNotice}
+          </Text>
+          <TouchableOpacity
+            onPress={() => setResumeNotice(null)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close" size={16} color={THEME.colors.textDim} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {!isPlayerFullscreen && (
         <ScrollView style={styles.scrollBody} showsVerticalScrollIndicator={false}>
@@ -268,6 +373,22 @@ const styles = StyleSheet.create({
   loadingText: {
     color: THEME.colors.textDim,
     fontSize: 12,
+  },
+  resumeNoticeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(229, 9, 20, 0.12)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(229, 9, 20, 0.25)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  resumeNoticeText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#FFF',
+    fontWeight: '500',
   },
   infoSection: {
     padding: THEME.spacing.lg,
