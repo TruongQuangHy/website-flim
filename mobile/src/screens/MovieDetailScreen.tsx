@@ -70,7 +70,7 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
           try {
             const userSession = await historyStorage.getUserSession();
             if (userSession?.isLoggedIn) {
-              const hist = await historyStorage.getWatchHistory();
+              const hist = await historyStorage.syncFromSupabase(userSession.username);
               const saved = hist[initialMovie.slug];
 
               const epSlugToFind = initialEpisodeSlug || saved?.lastEpisodeSlug;

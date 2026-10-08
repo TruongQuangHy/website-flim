@@ -66,8 +66,14 @@ export default function MoviePage({ params }: MoviePageProps) {
   const [copiedLink, setCopiedLink] = useState(false);
   const [resumeNotice, setResumeNotice] = useState<string | null>(null);
 
-  const { user, history, saveProgress } = useUserHistoryStore();
+  const { user, history, saveProgress, syncFromDatabase } = useUserHistoryStore();
   const currentPosRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (user?.isLoggedIn) {
+      syncFromDatabase();
+    }
+  }, [user?.isLoggedIn, syncFromDatabase]);
 
   useEffect(() => {
     params.then((resolvedParams) => {

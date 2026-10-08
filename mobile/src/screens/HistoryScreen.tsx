@@ -43,12 +43,13 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectMovie }) =
       if (currentSession?.isLoggedIn) {
         const hist = await historyStorage.getWatchHistory();
         setHistory(hist);
-        // Sync latest from Supabase in background
-        historyStorage.syncFromSupabase(currentSession.username).then((merged) => {
+        // Sync latest from Supabase
+        try {
+          const merged = await historyStorage.syncFromSupabase(currentSession.username);
           if (merged && Object.keys(merged).length > 0) {
             setHistory(merged);
           }
-        }).catch(() => {});
+        } catch {}
       }
     } catch (e) {
       console.error('Failed to load history data:', e);

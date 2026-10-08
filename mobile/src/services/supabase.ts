@@ -5,8 +5,7 @@ import { WatchProgressItem } from '../types';
 // Direct in-code configuration (no .env required)
 export const SUPABASE_URL = 'https://pqqimfaplmdhdmpkkmlq.supabase.co';
 
-export const SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxcWltZmFwbG1kaGRtcGtrbWxxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1NjE4NDksImV4cCI6MjEwNjEzNzg0OX0.placeholder';
+export const SUPABASE_ANON_KEY = 'sb_publishable_Z4kNx9ioc5O9Zx2P5RCFtg_issOhHzE';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
