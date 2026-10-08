@@ -23,11 +23,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    const res = login(username, password);
+    const res = await login(username, password);
     if (res.success) {
       setSuccess(true);
       setTimeout(() => {

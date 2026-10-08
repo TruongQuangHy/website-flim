@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserSession, WatchProgressItem } from '../types';
+import { mobileSupabaseService } from './supabase';
 
 const STORAGE_KEY_SESSION = '@haiyen_user_session';
 const STORAGE_KEY_HISTORY = '@haiyen_watch_history';
@@ -27,6 +28,10 @@ export const historyStorage = {
         lastLogin: Date.now(),
       };
       await AsyncStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(session));
+
+      // Sync latest history from Supabase in background
+      this.syncFromSupabase('haiyen').catch(() => {});
+
       return { success: true };
     }
 
@@ -42,6 +47,22 @@ export const historyStorage = {
     } catch (e) {
       console.error('Failed to logout:', e);
     }
+  },
+
+  // Sync with Supabase
+  async syncFromSupabase(userId: string = 'haiyen'): Promise<Record<string, WatchProgressItem>> {
+    try {
+      const remote = await mobileSupabaseService.fetchHistory(userId);
+      if (remote && Object.keys(remote).length > 0) {
+        const local = await this.getWatchHistory();
+        const merged = { ...local, ...remote };
+        await AsyncStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(merged));
+        return merged;
+      }
+    } catch (err) {
+      console.warn('Failed to sync from Supabase:', err);
+    }
+    return this.getWatchHistory();
   },
 
   // Watch History
@@ -109,8 +130,14 @@ export const historyStorage = {
         updatedAt: Date.now(),
       };
 
+      // 1. Save to local AsyncStorage
       history[data.movieSlug] = updatedItem;
       await AsyncStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(history));
+
+      // 2. Sync to Supabase in background
+      mobileSupabaseService.saveProgress(updatedItem, session.username).catch((err) => {
+        console.warn('Mobile Supabase saveProgress background error:', err);
+      });
     } catch (e) {
       console.error('Failed to save watch progress:', e);
     }
@@ -118,6 +145,7 @@ export const historyStorage = {
 
   async markCompleted(movieSlug: string, isCompleted: boolean = true): Promise<void> {
     try {
+      const session = await this.getUserSession();
       const history = await this.getWatchHistory();
       const existing = history[movieSlug];
       if (!existing) return;
@@ -129,6 +157,10 @@ export const historyStorage = {
       };
 
       await AsyncStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(history));
+
+      if (session?.isLoggedIn) {
+        mobileSupabaseService.markCompleted(movieSlug, isCompleted, session.username).catch(() => {});
+      }
     } catch (e) {
       console.error('Failed to mark completed:', e);
     }
@@ -136,9 +168,14 @@ export const historyStorage = {
 
   async deleteHistoryItem(movieSlug: string): Promise<void> {
     try {
+      const session = await this.getUserSession();
       const history = await this.getWatchHistory();
       delete history[movieSlug];
       await AsyncStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(history));
+
+      if (session?.isLoggedIn) {
+        mobileSupabaseService.deleteItem(movieSlug, session.username).catch(() => {});
+      }
     } catch (e) {
       console.error('Failed to delete history item:', e);
     }
@@ -148,7 +185,7 @@ export const historyStorage = {
     try {
       await AsyncStorage.removeItem(STORAGE_KEY_HISTORY);
     } catch (e) {
-      console.error('Failed to clear history:', e);
+      console.error('Failed to clear all history:', e);
     }
   },
 };

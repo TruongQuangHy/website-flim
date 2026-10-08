@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUserHistoryStore } from "../store/useUserHistoryStore";
@@ -22,6 +22,7 @@ export default function WatchHistoryPage() {
   const {
     user,
     history,
+    syncFromDatabase,
     markCompleted,
     removeMovie,
     clearAllHistory,
@@ -32,6 +33,12 @@ export default function WatchHistoryPage() {
   const [activeTab, setActiveTab] = useState<"watching" | "completed">("watching");
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [importStatus, setImportStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.isLoggedIn) {
+      syncFromDatabase();
+    }
+  }, [user?.isLoggedIn, syncFromDatabase]);
 
   // Group movies
   const historyList = useMemo(() => {
