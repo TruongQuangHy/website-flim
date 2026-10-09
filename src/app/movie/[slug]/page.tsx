@@ -172,6 +172,15 @@ export default function MoviePage({ params }: MoviePageProps) {
     return allCurrentEpisodes.findIndex((ep) => ep.slug === selectedEpisodeSlug);
   }, [allCurrentEpisodes, selectedEpisodeSlug]);
 
+  // Both sources of the active episode (player picks the best one per device)
+  const activeEpisode = useMemo(() => {
+    for (const srv of movieDetails?.episodes || []) {
+      const found = srv.server_data?.find((ep) => ep.slug === selectedEpisodeSlug);
+      if (found) return found;
+    }
+    return undefined;
+  }, [movieDetails, selectedEpisodeSlug]);
+
   const hasPrevEpisode = currentEpisodeIndex > 0;
   const hasNextEpisode =
     currentEpisodeIndex >= 0 &&
@@ -491,6 +500,8 @@ export default function MoviePage({ params }: MoviePageProps) {
           <div className="w-full mb-6">
             <VideoPlayerCard
               src={currentVideo}
+              embedSrc={activeEpisode?.link_embed}
+              m3u8Src={activeEpisode?.link_m3u8}
               movieSlug={slug}
               episodeSlug={selectedEpisodeSlug}
               episodeName={selectedEpisodeName}
