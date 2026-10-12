@@ -13,6 +13,13 @@ import {
   OphimAppDomains,
   OphimSeoOnPage,
 } from "../types/navType";
+import {
+  findCustomMovieBySlug,
+  findCustomMovieCast,
+  searchCustomMovies,
+  getCustomMoviesForList,
+  getAllCustomMovies,
+} from "../data/customMovies";
 
 // =======================
 // 🔧 API Configuration
@@ -166,12 +173,19 @@ export class MovieAPI {
       appDomains: OphimAppDomains;
     }) => void
   ): Promise<VsmovMovieItem[]> {
+    const customItems = getAllCustomMovies();
     try {
       const response = await vsmovApi.get("/danh-sach/phim-moi-cap-nhat", {
         params: { page: 1 },
       });
       const data = response.data as VsmovListResponse;
-      const items = (data.items || []).map(MovieAPI.sanitizeMovieItem);
+      const apiItems = (data.items || []).map(MovieAPI.sanitizeMovieItem);
+
+      // Prepend custom movies if not already present
+      const items = [
+        ...customItems,
+        ...apiItems.filter((it) => !customItems.some((c) => c.slug === it.slug)),
+      ];
 
       const result = {
         items,
@@ -199,6 +213,31 @@ export class MovieAPI {
       return items;
     } catch (error) {
       console.error("Error fetching VSMOV home data:", error);
+      if (customItems.length > 0) {
+        const fallbackResult = {
+          items: customItems,
+          pagination: {
+            totalItems: customItems.length,
+            totalItemsPerPage: 24,
+            currentPage: 1,
+          },
+          seoOnPage: {
+            titleHead: "HyFlim - Xem phim online chất lượng cao",
+            descriptionHead:
+              "Kho phim chiếu rạp, phim mới, phim bộ và phim lẻ hấp dẫn nhất.",
+            og_type: "website",
+            og_image: [],
+          },
+          appDomains: {
+            frontend: "https://vsmov.com",
+            cdnImage: "https://vsmov.com",
+          },
+        };
+        if (saveToStore) {
+          saveToStore(fallbackResult);
+        }
+        return customItems;
+      }
       return [];
     }
   }
@@ -226,11 +265,18 @@ export class MovieAPI {
     titlePage: string;
     appDomains: OphimAppDomains;
   }> {
-    try {
-      // Map alias slugs
-      const resolvedSlug =
-        slug === "phim-moi-phat-hanh" ? "phim-moi-cap-nhat" : slug;
+    // Map alias slugs
+    const resolvedSlug =
+      slug === "phim-moi-phat-hanh" ? "phim-moi-cap-nhat" : slug;
 
+    const customMatches =
+      page === 1 ? getCustomMoviesForList(category, resolvedSlug) : [];
+    const title =
+      LIST_TITLES[slug] ||
+      LIST_TITLES[resolvedSlug] ||
+      MovieAPI.formatSlugToTitle(slug);
+
+    try {
       let endpoint = `/danh-sach/${resolvedSlug}`;
       if (category === "the-loai") {
         endpoint = `/the-loai/${resolvedSlug}`;
@@ -242,12 +288,18 @@ export class MovieAPI {
         params: { page },
       });
       const data = response.data as VsmovListResponse;
-      const items = (data.items || []).map(MovieAPI.sanitizeMovieItem);
+      const apiItems = (data.items || []).map(MovieAPI.sanitizeMovieItem);
 
-      const title =
-        LIST_TITLES[slug] ||
-        LIST_TITLES[resolvedSlug] ||
-        MovieAPI.formatSlugToTitle(slug);
+      // Prepend custom items on page 1
+      const items =
+        customMatches.length > 0
+          ? [
+              ...customMatches,
+              ...apiItems.filter(
+                (it) => !customMatches.some((c) => c.slug === it.slug)
+              ),
+            ]
+          : apiItems;
 
       const result = {
         items,
@@ -278,6 +330,31 @@ export class MovieAPI {
         `Error fetching VSMOV list for ${category}/${slug}:`,
         error
       );
+      if (customMatches.length > 0) {
+        const fallbackResult = {
+          items: customMatches,
+          pagination: {
+            totalItems: customMatches.length,
+            totalItemsPerPage: 24,
+            currentPage: 1,
+          },
+          seoOnPage: {
+            titleHead: `${title} | HyFlim`,
+            descriptionHead: `Danh sách ${title} cập nhật mới nhất.`,
+            og_type: "video.movie",
+            og_image: [],
+          },
+          titlePage: title,
+          appDomains: {
+            frontend: "https://vsmov.com",
+            cdnImage: "https://vsmov.com",
+          },
+        };
+        if (saveToStore) {
+          saveToStore(fallbackResult);
+        }
+        return fallbackResult;
+      }
       throw new Error(`Failed to fetch list data for ${category}/${slug}`);
     }
   }
@@ -291,6 +368,15 @@ export class MovieAPI {
     item: VsmovMovieItem;
     cdnImage: string;
   }> {
+    // Check custom movies first (instant & reliable)
+    const custom = findCustomMovieBySlug(slug);
+    if (custom) {
+      return {
+        item: custom,
+        cdnImage: "https://motphimc.pw",
+      };
+    }
+
     try {
       const response = await vsmovApi.get(`/phim/${slug}`);
       const data = response.data as VsmovDetailResponse;
@@ -307,6 +393,14 @@ export class MovieAPI {
       }
       throw new Error("Invalid movie details response from VSMOV");
     } catch (error) {
+      // Final fallback check
+      const fallbackCustom = findCustomMovieBySlug(slug);
+      if (fallbackCustom) {
+        return {
+          item: fallbackCustom,
+          cdnImage: "https://motphimc.pw",
+        };
+      }
       console.error(`Error fetching movie details for ${slug}:`, error);
       throw new Error(`Failed to fetch movie details for ${slug}`);
     }
@@ -316,6 +410,11 @@ export class MovieAPI {
    * Get movie peoples (fallback from movie item actor list)
    */
   static async getMoviePeoples(slug: string): Promise<MoviePerson[]> {
+    const customCast = findCustomMovieCast(slug);
+    if (customCast) {
+      return customCast;
+    }
+
     try {
       // VSMOV embeds actor names in movie details
       const { item } = await MovieAPI.getMovieDetails(slug);
@@ -356,12 +455,24 @@ export class MovieAPI {
     keyword: string;
     appDomains: OphimAppDomains;
   }> {
+    const customMatches = page === 1 ? searchCustomMovies(keyword) : [];
+
     try {
       const response = await vsmovApi.get("/tim-kiem", {
         params: { keyword, page },
       });
       const data = response.data as VsmovListResponse;
-      const items = (data.items || []).map(MovieAPI.sanitizeMovieItem);
+      const apiItems = (data.items || []).map(MovieAPI.sanitizeMovieItem);
+
+      const items =
+        customMatches.length > 0
+          ? [
+              ...customMatches,
+              ...apiItems.filter(
+                (it) => !customMatches.some((c) => c.slug === it.slug)
+              ),
+            ]
+          : apiItems;
 
       const result = {
         items,
@@ -390,9 +501,14 @@ export class MovieAPI {
       return result;
     } catch (error) {
       console.error(`Error searching movies with keyword "${keyword}":`, error);
+      const fallbackItems = customMatches;
       return {
-        items: [],
-        pagination: { totalItems: 0, totalItemsPerPage: 20, currentPage: 1 },
+        items: fallbackItems,
+        pagination: {
+          totalItems: fallbackItems.length,
+          totalItemsPerPage: 20,
+          currentPage: 1,
+        },
         seoOnPage: {},
         titlePage: `Tìm kiếm: "${keyword}"`,
         keyword,

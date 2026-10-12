@@ -48,6 +48,16 @@ const nextConfig: NextConfig = {
         hostname: "img.ophim1.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "motphimc.pw",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.motphimc.pw",
+        pathname: "/**",
+      },
     ],
   },
   experimental: {

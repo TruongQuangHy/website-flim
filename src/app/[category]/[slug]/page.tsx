@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, use } from "react";
+import { useRouter } from "next/navigation";
 import { useStore } from "@/app/store/useStore";
 import { MovieAPI } from "@/app/lib/api";
 import { ChevronRight, Film } from "lucide-react";
@@ -23,6 +24,7 @@ interface PageProps {
 
 export default function CategorySlugPage({ params }: PageProps) {
   const { category, slug } = use(params);
+  const router = useRouter();
   const { listDataBySlug, setListData, isLoadingList, setIsLoadingList } =
     useStore();
   const [currentPage, setCurrentPage] = useState(1);
@@ -31,6 +33,11 @@ export default function CategorySlugPage({ params }: PageProps) {
   const isLoading = isLoadingList[slug] || false;
 
   useEffect(() => {
+    if (category === "phim") {
+      router.replace(`/movie/${slug}`);
+      return;
+    }
+
     const fetchListData = async () => {
       setIsLoadingList(slug, true);
       try {

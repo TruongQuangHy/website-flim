@@ -5,6 +5,11 @@ import {
   MovieDetailResponse,
   MoviePagination,
 } from '../types';
+import {
+  findMobileCustomMovie,
+  searchMobileCustomMovies,
+  getMobileCustomMoviesForList,
+} from '../data/customMovies';
 
 const VSMOV_BASE_URL = 'https://vsmov.com/api';
 const CDN_FALLBACK = 'https://vsmov.com/uploads/movies/';
@@ -47,16 +52,28 @@ export const MovieAPI = {
    * Fetch movie list by slug (e.g. phim-moi-cap-nhat, phim-chieu-rap, phim-bo, phim-le, hoat-hinh)
    */
   async getList(slug: string, page = 1): Promise<MovieListResponse> {
+    const customMatches = page === 1 ? getMobileCustomMoviesForList(slug) : [];
     try {
       const response = await api.get(`/danh-sach/${slug}`, {
         params: { page },
       });
       const data = response.data;
+      const apiItems = data.items || [];
+      const items =
+        customMatches.length > 0
+          ? [
+              ...customMatches,
+              ...apiItems.filter(
+                (it: MovieItem) => !customMatches.some((c) => c.slug === it.slug)
+              ),
+            ]
+          : apiItems;
+
       return {
         status: data.status ?? true,
-        items: data.items || [],
+        items,
         pagination: data.pagination || {
-          totalItems: (data.items || []).length,
+          totalItems: items.length,
           totalItemsPerPage: 24,
           currentPage: page,
         },
@@ -65,9 +82,10 @@ export const MovieAPI = {
     } catch (error) {
       console.error(`Error fetching list ${slug}:`, error);
       return {
-        status: false,
-        items: [],
-        pagination: { totalItems: 0, totalItemsPerPage: 24, currentPage: page },
+        status: customMatches.length > 0,
+        items: customMatches,
+        pagination: { totalItems: customMatches.length, totalItemsPerPage: 24, currentPage: page },
+        titlePage: slug,
       };
     }
   },
@@ -76,6 +94,11 @@ export const MovieAPI = {
    * Fetch movie details and episodes by slug
    */
   async getDetail(slug: string): Promise<MovieItem | null> {
+    const custom = findMobileCustomMovie(slug);
+    if (custom) {
+      return custom;
+    }
+
     try {
       const response = await api.get(`/phim/${slug}`);
       const data = response.data as MovieDetailResponse;
@@ -87,7 +110,7 @@ export const MovieAPI = {
       return null;
     } catch (error) {
       console.error(`Error fetching movie detail ${slug}:`, error);
-      return null;
+      return findMobileCustomMovie(slug) || null;
     }
   },
 
@@ -95,16 +118,28 @@ export const MovieAPI = {
    * Search movies by keyword
    */
   async search(keyword: string, page = 1): Promise<MovieListResponse> {
+    const customMatches = page === 1 ? searchMobileCustomMovies(keyword) : [];
     try {
       const response = await api.get('/tim-kiem', {
         params: { keyword, page },
       });
       const data = response.data;
+      const apiItems = data.items || [];
+      const items =
+        customMatches.length > 0
+          ? [
+              ...customMatches,
+              ...apiItems.filter(
+                (it: MovieItem) => !customMatches.some((c) => c.slug === it.slug)
+              ),
+            ]
+          : apiItems;
+
       return {
         status: data.status ?? true,
-        items: data.items || [],
+        items,
         pagination: data.pagination || {
-          totalItems: (data.items || []).length,
+          totalItems: items.length,
           totalItemsPerPage: 24,
           currentPage: page,
         },
@@ -112,9 +147,9 @@ export const MovieAPI = {
     } catch (error) {
       console.error(`Error searching movies ${keyword}:`, error);
       return {
-        status: false,
-        items: [],
-        pagination: { totalItems: 0, totalItemsPerPage: 24, currentPage: page },
+        status: customMatches.length > 0,
+        items: customMatches,
+        pagination: { totalItems: customMatches.length, totalItemsPerPage: 24, currentPage: page },
       };
     }
   },
@@ -123,16 +158,28 @@ export const MovieAPI = {
    * Fetch movies by category or country
    */
   async getByCategory(type: 'the-loai' | 'quoc-gia', slug: string, page = 1): Promise<MovieListResponse> {
+    const customMatches = page === 1 ? getMobileCustomMoviesForList(slug) : [];
     try {
       const response = await api.get(`/${type}/${slug}`, {
         params: { page },
       });
       const data = response.data;
+      const apiItems = data.items || [];
+      const items =
+        customMatches.length > 0
+          ? [
+              ...customMatches,
+              ...apiItems.filter(
+                (it: MovieItem) => !customMatches.some((c) => c.slug === it.slug)
+              ),
+            ]
+          : apiItems;
+
       return {
         status: data.status ?? true,
-        items: data.items || [],
+        items,
         pagination: data.pagination || {
-          totalItems: (data.items || []).length,
+          totalItems: items.length,
           totalItemsPerPage: 24,
           currentPage: page,
         },
@@ -140,9 +187,9 @@ export const MovieAPI = {
     } catch (error) {
       console.error(`Error fetching ${type}/${slug}:`, error);
       return {
-        status: false,
-        items: [],
-        pagination: { totalItems: 0, totalItemsPerPage: 24, currentPage: page },
+        status: customMatches.length > 0,
+        items: customMatches,
+        pagination: { totalItems: customMatches.length, totalItemsPerPage: 24, currentPage: page },
       };
     }
   },
