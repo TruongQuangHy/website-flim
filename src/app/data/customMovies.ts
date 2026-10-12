@@ -171,8 +171,12 @@ export function findCustomMovieCast(slug: string): MoviePerson[] | undefined {
 }
 
 export function searchCustomMovies(keyword: string): VsmovMovieItem[] {
-  const clean = removeVietnameseTones(keyword);
-  if (!clean) return [];
+  const rawClean = removeVietnameseTones(keyword);
+  if (!rawClean) return [];
+
+  // Remove common prefix "phim " if user searches "phim thien duong mau"
+  const clean = rawClean.replace(/^phim\s+/i, "").trim() || rawClean;
+  const words = clean.split(" ").filter((w) => w.length > 1);
 
   return CUSTOM_MOVIES.filter((e) => {
     const nameNorm = removeVietnameseTones(e.movie.name);
@@ -181,14 +185,29 @@ export function searchCustomMovies(keyword: string): VsmovMovieItem[] {
     const actorsNorm = (e.movie.actor || []).map(removeVietnameseTones).join(" ");
     const directorNorm = (e.movie.director || []).map(removeVietnameseTones).join(" ");
 
-    return (
+    // 1. Direct or bidirectional match
+    if (
       nameNorm.includes(clean) ||
+      clean.includes(nameNorm) ||
       originNorm.includes(clean) ||
       slugNorm.includes(clean) ||
       actorsNorm.includes(clean) ||
       directorNorm.includes(clean) ||
+      e.aliases.some((al) => removeVietnameseTones(al).includes(clean))
+    ) {
+      return true;
+    }
+
+    // 2. All words match (e.g. "thien mau", "duong mau")
+    if (words.length > 0 && words.every((w) => nameNorm.includes(w) || originNorm.includes(w) || slugNorm.includes(w))) {
+      return true;
+    }
+
+    // 3. Fallback keywords
+    return (
       clean.includes("thien duong") ||
-      clean.includes("bloody haven")
+      clean.includes("bloody haven") ||
+      nameNorm.includes("thien duong mau")
     );
   }).map((e) => ({ ...e.movie }));
 }

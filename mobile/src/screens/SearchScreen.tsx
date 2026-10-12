@@ -24,13 +24,13 @@ interface SearchScreenProps {
 }
 
 const POPULAR_KEYWORDS = [
+  'Thiên Đường Máu',
+  'Tiếng Yêu Này',
   'Người Nhện',
-  'Hành động',
   'Chiếu rạp',
+  'Hành động',
   'Anime',
   'Kinh dị',
-  'Tình cảm',
-  'Hài hước',
   'Hàn Quốc',
 ];
 

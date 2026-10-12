@@ -328,7 +328,11 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ onSelectMovie }) =
                 <View style={styles.posterContainer}>
                   {item.posterUrl ? (
                     <Image
-                      source={{ uri: item.posterUrl }}
+                      source={{
+                        uri: item.posterUrl.startsWith('/')
+                          ? `https://website-flim.vercel.app${item.posterUrl}`
+                          : item.posterUrl,
+                      }}
                       style={styles.posterImage}
                       resizeMode="cover"
                     />

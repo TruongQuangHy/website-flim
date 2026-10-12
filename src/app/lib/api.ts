@@ -476,9 +476,9 @@ export class MovieAPI {
 
       const result = {
         items,
-        pagination: data.pagination || {
-          totalItems: items.length,
-          totalItemsPerPage: 20,
+        pagination: {
+          totalItems: Math.max(items.length, (data.pagination?.totalItems || 0) + customMatches.length),
+          totalItemsPerPage: data.pagination?.totalItemsPerPage || 20,
           currentPage: page,
         },
         seoOnPage: {
