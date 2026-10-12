@@ -33,6 +33,7 @@ import {
   Heart,
   RotateCcw,
   X,
+  Play,
 } from "lucide-react";
 import { useUserHistoryStore } from "@/app/store/useUserHistoryStore";
 
@@ -97,21 +98,28 @@ export default function MoviePage({ params }: MoviePageProps) {
 
         // Pick episode: Check if user Hai Yen has history for this movie
         const movieHistory = user?.isLoggedIn ? history[slug] : null;
-        const firstServer = item.episodes?.[0];
         let targetEpisode: VsmovEpisodeItem | undefined;
 
-        if (movieHistory?.lastEpisodeSlug && firstServer?.server_data?.length) {
-          targetEpisode = firstServer.server_data.find(
-            (ep) => ep.slug === movieHistory.lastEpisodeSlug
-          );
+        if (movieHistory?.lastEpisodeSlug && item.episodes?.length) {
+          for (const srv of item.episodes) {
+            const found = srv.server_data?.find(
+              (ep) => ep.slug === movieHistory.lastEpisodeSlug
+            );
+            if (found) {
+              targetEpisode = found;
+              break;
+            }
+          }
         }
 
         if (!targetEpisode) {
+          const firstServer = item.episodes?.[0];
           targetEpisode = firstServer?.server_data?.[0];
         }
 
         if (targetEpisode) {
-          const videoSrc = targetEpisode.link_embed || targetEpisode.link_m3u8 || "";
+          // Prefer link_m3u8, fallback to link_embed
+          const videoSrc = targetEpisode.link_m3u8 || targetEpisode.link_embed || "";
           setCurrentVideo(videoSrc);
           setSelectedEpisodeSlug(targetEpisode.slug);
           setSelectedEpisodeName(targetEpisode.name);
@@ -122,8 +130,11 @@ export default function MoviePage({ params }: MoviePageProps) {
             const mins = Math.floor(movieHistory.lastPositionSeconds / 60);
             const secs = Math.floor(movieHistory.lastPositionSeconds % 60);
             const timeStr = `${mins}:${secs.toString().padStart(2, "0")}`;
+            const epLabel = targetEpisode.name.toLowerCase().includes("tập")
+              ? targetEpisode.name
+              : `Tập ${targetEpisode.name}`;
             setResumeNotice(
-              `✨ Chào Hải Yến! Đang tự động mở ${targetEpisode.name} từ đoạn xem dở (${timeStr}).`
+              `✨ Chào Hải Yến! Đang tự động mở ${epLabel} từ đoạn xem dở (${timeStr}).`
             );
           } else {
             checkSavedProgress(slug, targetEpisode.slug);
@@ -230,13 +241,50 @@ export default function MoviePage({ params }: MoviePageProps) {
     episodeSlug: string,
     episodeName?: string
   ) => {
-    setResumeTime(0);
-    currentPosRef.current = 0;
+    const movieHistory = user?.isLoggedIn ? history[slug] : null;
+    let savedSec = 0;
+
+    // Check if user already has saved progress for this episode
+    if (
+      movieHistory &&
+      movieHistory.lastEpisodeSlug === episodeSlug &&
+      movieHistory.lastPositionSeconds > 10
+    ) {
+      savedSec = movieHistory.lastPositionSeconds;
+    } else {
+      try {
+        const local = localStorage.getItem(`watch_progress_${slug}_${episodeSlug}`);
+        if (local) {
+          const parsed = JSON.parse(local);
+          if (parsed.currentTime > 10) savedSec = Math.floor(parsed.currentTime);
+        }
+      } catch {}
+    }
+
     setSavedProgress(null);
     setCurrentVideo(episodeLink);
     setSelectedEpisodeSlug(episodeSlug);
     if (episodeName) setSelectedEpisodeName(episodeName);
-    setResumeNotice(null);
+
+    if (savedSec > 10) {
+      setResumeTime(savedSec);
+      currentPosRef.current = savedSec;
+      const mins = Math.floor(savedSec / 60);
+      const secs = Math.floor(savedSec % 60);
+      const timeStr = `${mins}:${secs.toString().padStart(2, "0")}`;
+      const epLabel = episodeName
+        ? episodeName.toLowerCase().includes("tập")
+          ? episodeName
+          : `Tập ${episodeName}`
+        : "Tập";
+      setResumeNotice(
+        `✨ Chào Hải Yến! Đang tự động mở ${epLabel} từ đoạn xem dở (${timeStr}).`
+      );
+    } else {
+      setResumeTime(0);
+      currentPosRef.current = 0;
+      setResumeNotice(null);
+    }
 
     if (user?.isLoggedIn && movieDetails) {
       saveProgress({
@@ -248,7 +296,7 @@ export default function MoviePage({ params }: MoviePageProps) {
         year: movieDetails.year,
         lastEpisodeSlug: episodeSlug,
         lastEpisodeName: episodeName || "Tập",
-        lastPositionSeconds: 0,
+        lastPositionSeconds: savedSec,
         durationSeconds: 2700,
         totalEpisodes: allCurrentEpisodes.length || 1,
       });
@@ -259,55 +307,50 @@ export default function MoviePage({ params }: MoviePageProps) {
     }, 100);
   };
 
-  // Periodic watch progress tracking for Hai Yen
+  // Save watch progress on unmount / navigation
   useEffect(() => {
-    if (!user?.isLoggedIn || !movieDetails || !selectedEpisodeSlug) return;
+    return () => {
+      if (
+        user?.isLoggedIn &&
+        movieDetails &&
+        selectedEpisodeSlug &&
+        currentPosRef.current > 10
+      ) {
+        saveProgress({
+          movieSlug: slug,
+          movieName: movieDetails.name,
+          originName: movieDetails.origin_name,
+          posterUrl: getMovieImageUrl(movieDetails, cdnImage),
+          quality: movieDetails.quality,
+          year: movieDetails.year,
+          lastEpisodeSlug: selectedEpisodeSlug,
+          lastEpisodeName: selectedEpisodeName || "Tập",
+          lastPositionSeconds: currentPosRef.current,
+          durationSeconds: 2700,
+          totalEpisodes: allCurrentEpisodes.length || 1,
+        });
+      }
+    };
+  }, [user?.isLoggedIn, movieDetails, selectedEpisodeSlug, selectedEpisodeName]);
 
-    const currentEpName = selectedEpisodeName || "Tập 1";
-    const totalEps = allCurrentEpisodes.length || 1;
-    const existing = history[slug];
-    const initialPos =
-      existing?.lastEpisodeSlug === selectedEpisodeSlug
-        ? existing.lastPositionSeconds
-        : currentPosRef.current;
-    const initialDuration = existing?.durationSeconds || 2700;
-
-    saveProgress({
-      movieSlug: slug,
-      movieName: movieDetails.name,
-      originName: movieDetails.origin_name,
-      posterUrl: getMovieImageUrl(movieDetails, cdnImage),
-      quality: movieDetails.quality,
-      year: movieDetails.year,
-      lastEpisodeSlug: selectedEpisodeSlug,
-      lastEpisodeName: currentEpName,
-      lastPositionSeconds: initialPos,
-      durationSeconds: initialDuration,
-      totalEpisodes: totalEps,
-    });
-
-    const interval = setInterval(() => {
-      currentPosRef.current += 10;
-      saveProgress({
-        movieSlug: slug,
-        movieName: movieDetails.name,
-        originName: movieDetails.origin_name,
-        posterUrl: getMovieImageUrl(movieDetails, cdnImage),
-        quality: movieDetails.quality,
-        year: movieDetails.year,
-        lastEpisodeSlug: selectedEpisodeSlug,
-        lastEpisodeName: currentEpName,
-        lastPositionSeconds: currentPosRef.current,
-        durationSeconds: initialDuration,
-        totalEpisodes: totalEps,
-      });
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, [user?.isLoggedIn, movieDetails?.name, selectedEpisodeSlug, selectedEpisodeName]);
+  const lastSavedTimeRef = useRef<number>(0);
 
   const handleTimeUpdate = (currentTime: number, duration?: number) => {
-    currentPosRef.current = Math.floor(currentTime);
+    const curSec = Math.floor(currentTime);
+    currentPosRef.current = curSec;
+
+    // Guard: Do not save startup seconds (< 10s) if we are resuming from a position > 15s
+    if (resumeTime && resumeTime > 15 && curSec < 10) {
+      return;
+    }
+
+    // Throttle database/store saves to at most once every 5 seconds
+    const now = Date.now();
+    if (now - lastSavedTimeRef.current < 5000) {
+      return;
+    }
+    lastSavedTimeRef.current = now;
+
     if (user?.isLoggedIn && movieDetails && selectedEpisodeSlug) {
       saveProgress({
         movieSlug: slug,
@@ -318,7 +361,7 @@ export default function MoviePage({ params }: MoviePageProps) {
         year: movieDetails.year,
         lastEpisodeSlug: selectedEpisodeSlug,
         lastEpisodeName: selectedEpisodeName || "Tập",
-        lastPositionSeconds: Math.floor(currentTime),
+        lastPositionSeconds: curSec,
         durationSeconds: duration ? Math.floor(duration) : 2700,
         totalEpisodes: allCurrentEpisodes.length || 1,
       });
@@ -334,13 +377,37 @@ export default function MoviePage({ params }: MoviePageProps) {
 
   const handleStartFromBeginning = () => {
     setResumeTime(0);
+    currentPosRef.current = 0;
+    setResumeNotice(null);
     setSavedProgress(null);
     if (savedProgress) {
       localStorage.removeItem(
         `watch_progress_${savedProgress.movieSlug}_${savedProgress.episodeSlug}`
       );
     }
+    if (user?.isLoggedIn && movieDetails && selectedEpisodeSlug) {
+      saveProgress({
+        movieSlug: slug,
+        movieName: movieDetails.name,
+        originName: movieDetails.origin_name,
+        posterUrl: getMovieImageUrl(movieDetails, cdnImage),
+        quality: movieDetails.quality,
+        year: movieDetails.year,
+        lastEpisodeSlug: selectedEpisodeSlug,
+        lastEpisodeName: selectedEpisodeName || "Tập",
+        lastPositionSeconds: 0,
+        durationSeconds: 2700,
+        totalEpisodes: allCurrentEpisodes.length || 1,
+        forceReset: true,
+      });
+    }
     setShowResumeDialog(false);
+  };
+
+  const handleForceResumeSeek = () => {
+    if (resumeTime && resumeTime > 0) {
+      setResumeTime((prev) => (prev ? prev + 0.001 : prev));
+    }
   };
 
   const handleShareMovie = () => {
@@ -471,13 +538,19 @@ export default function MoviePage({ params }: MoviePageProps) {
               <span>{resumeNotice}</span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              {resumeTime && resumeTime > 10 ? (
+                <button
+                  type="button"
+                  onClick={handleForceResumeSeek}
+                  className="px-2.5 py-1 rounded-lg bg-brand hover:bg-brand/90 text-white text-xs font-semibold flex items-center gap-1 shadow-md shadow-brand/20 transition-all active:scale-95"
+                >
+                  <Play className="w-3 h-3 fill-white" />
+                  <span>Tiếp tục</span>
+                </button>
+              ) : null}
               <button
                 type="button"
-                onClick={() => {
-                  setResumeTime(0);
-                  currentPosRef.current = 0;
-                  setResumeNotice(null);
-                }}
+                onClick={handleStartFromBeginning}
                 className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white/90 text-xs font-medium flex items-center gap-1 transition-colors"
               >
                 <RotateCcw className="w-3 h-3" />

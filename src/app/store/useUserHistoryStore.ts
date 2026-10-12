@@ -29,6 +29,7 @@ interface UserHistoryState {
     lastPositionSeconds: number;
     durationSeconds: number;
     totalEpisodes?: number;
+    forceReset?: boolean;
   }) => void;
   markCompleted: (movieSlug: string, isCompleted?: boolean) => void;
   removeMovie: (movieSlug: string) => void;
@@ -109,9 +110,23 @@ export const useUserHistoryStore = create<UserHistoryState>()(
 
         const duration = Math.max(1, data.durationSeconds);
         const position = Math.max(0, data.lastPositionSeconds);
+        const existing = history[data.movieSlug];
+
+        // CRITICAL PROTECTION: If user was already watching this episode at > 30s
+        // (e.g. 424s or 900s), and a new progress comes in with position < 15s,
+        // DO NOT downgrade/overwrite the saved progress with 0..14s unless forceReset: true!
+        if (
+          !data.forceReset &&
+          existing &&
+          existing.lastEpisodeSlug === data.lastEpisodeSlug &&
+          existing.lastPositionSeconds > 30 &&
+          position < 15
+        ) {
+          return;
+        }
+
         const progressPercent = Math.min(100, Math.round((position / duration) * 1000) / 10);
 
-        const existing = history[data.movieSlug];
         const watchedEpisodesSet = new Set<string>(existing?.watchedEpisodes || []);
 
         if (progressPercent >= 85) {

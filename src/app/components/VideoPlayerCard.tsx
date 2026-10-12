@@ -40,6 +40,33 @@ type PlayMode = "embed" | "hls";
 
 const isM3u8Url = (url?: string) => Boolean(url && /\.m3u8(\?|#|$)/i.test(url));
 
+/**
+ * Extracts a direct .m3u8 master playlist from known embed player URLs (vsmov, phimapi, etc.)
+ * This allows playing directly via native HTML5 / Hls.js instead of an iframe.
+ */
+export function extractDirectHlsUrl(url?: string): string {
+  if (!url) return "";
+  const clean = (url || "").trim();
+
+  // Already a direct .m3u8
+  if (/\.m3u8(\?|#|$)/i.test(clean)) return clean;
+
+  // Streamvsmov embed: https://v*.streamvsmov.com/video/UUID -> https://v*.streamvsmov.com/stream/UUID/master.m3u8
+  const vsmovMatch = clean.match(/^(https?:\/\/[^\/]+)\/video\/([0-9a-f-]{36})/i);
+  if (vsmovMatch) {
+    return `${vsmovMatch[1]}/stream/${vsmovMatch[2]}/master.m3u8`;
+  }
+
+  // Phimapi player embed: https://player.phimapi.com/player/?url=M3U8_URL
+  const phimapiMatch = clean.match(/[?&]url=([^&#]+)/i);
+  if (phimapiMatch) {
+    const decoded = decodeURIComponent(phimapiMatch[1]);
+    if (/\.m3u8/i.test(decoded)) return decoded;
+  }
+
+  return "";
+}
+
 // iOS Safari blocks http:// content inside https pages (mixed content) -> black frame.
 const normalizeUrl = (url?: string) => {
   const clean = (url || "").trim();
@@ -80,7 +107,13 @@ function VideoPlayerCard({
   const onTimeUpdateRef = useRef(onTimeUpdate);
   onTimeUpdateRef.current = onTimeUpdate;
 
-  const [isAppleMobile] = useState(detectAppleMobile);
+  const [isAppleMobile, setIsAppleMobile] = useState(false);
+  useEffect(() => {
+    setIsAppleMobile(detectAppleMobile());
+  }, []);
+
+  // Track whether resumeTime has been successfully applied to the video
+  const hasSoughtRef = useRef(false);
 
   // States for modern cinematic controls
   const [isTheaterMode, setIsTheaterMode] = useState(false);
@@ -98,17 +131,26 @@ function VideoPlayerCard({
   }, [embedSrc, src]);
 
   const hlsUrl = useMemo(() => {
-    const candidate = m3u8Src || (isM3u8Url(src) ? src : "");
-    return normalizeUrl(candidate);
-  }, [m3u8Src, src]);
+    // 1. Direct m3u8Src prop
+    if (m3u8Src && isM3u8Url(m3u8Src)) return normalizeUrl(m3u8Src);
+    // 2. Direct src prop if it's m3u8
+    if (src && isM3u8Url(src)) return normalizeUrl(src);
+    // 3. Extract stream from embed URLs (vsmov, phimapi)
+    const fromSrc = extractDirectHlsUrl(src);
+    if (fromSrc) return normalizeUrl(fromSrc);
+    const fromEmbed = extractDirectHlsUrl(embedSrc);
+    if (fromEmbed) return normalizeUrl(fromEmbed);
+    return "";
+  }, [m3u8Src, src, embedSrc]);
 
-  // iPhone: third-party embed players frequently render a black frame (ITP / autoplay / MSE limits),
-  // while iOS plays .m3u8 natively and reliably -> prefer HLS on Apple mobile devices.
+  // If HLS is available, ALWAYS prefer it across all devices (native on iOS Safari, hls.js on Android/Desktop).
+  // HLS allows exact seek/resume, live progress tracking, full cinema controls,
+  // and eliminates 3rd-party ads and iframe restrictions.
   const defaultMode: PlayMode = useMemo(() => {
-    if (isAppleMobile && hlsUrl) return "hls";
+    if (hlsUrl) return "hls";
     if (embedUrl) return "embed";
     return "hls";
-  }, [isAppleMobile, hlsUrl, embedUrl]);
+  }, [hlsUrl, embedUrl]);
 
   const mode: PlayMode =
     forcedMode === "embed" && embedUrl
@@ -119,11 +161,23 @@ function VideoPlayerCard({
 
   const canSwitchSource = Boolean(embedUrl && hlsUrl);
 
-  // Reset source choice whenever the episode changes
+  // If playing in embed mode and resumeTime is available, append start params
+  const embedUrlWithResume = useMemo(() => {
+    if (!embedUrl) return "";
+    if (!resumeTime || resumeTime <= 10) return embedUrl;
+    const cleanUrl = embedUrl.split("#")[0];
+    const hash = embedUrl.includes("#") ? `#${embedUrl.split("#")[1]}` : "";
+    const sep = cleanUrl.includes("?") ? "&" : "?";
+    const startSec = Math.floor(resumeTime);
+    return `${cleanUrl}${sep}start=${startSec}&t=${startSec}${hash}`;
+  }, [embedUrl, resumeTime]);
+
+  // Reset seek state and source choice whenever the episode changes
   useEffect(() => {
+    hasSoughtRef.current = false;
     setForcedMode(null);
     setPlayError(null);
-  }, [embedUrl, hlsUrl]);
+  }, [embedUrl, hlsUrl, movieSlug, episodeSlug]);
 
   // Handle Lights Off & escape key
   useEffect(() => {
@@ -237,6 +291,17 @@ function VideoPlayerCard({
       const duration = video.duration;
       if (!(currentTime > 0) || !(duration > 0) || !isFinite(duration)) return;
 
+      // Shield: If we are supposed to resume at e.g. 400s+, and the video is still at < 15s
+      // and seek hasn't confirmed yet, DO NOT report this initial startup period as user progress!
+      if (resumeTime && resumeTime > 20 && !hasSoughtRef.current && currentTime < 15) {
+        return;
+      }
+
+      // If video has reached near resumeTime or beyond, mark seek as confirmed
+      if (resumeTime && (currentTime >= resumeTime - 5 || Math.abs(currentTime - resumeTime) < 5)) {
+        hasSoughtRef.current = true;
+      }
+
       try {
         localStorage.setItem(
           `watch_progress_${movieSlug}_${episodeSlug}`,
@@ -251,29 +316,76 @@ function VideoPlayerCard({
 
     video.addEventListener("timeupdate", handleProgressUpdate);
     return () => video.removeEventListener("timeupdate", handleProgressUpdate);
-  }, [movieSlug, episodeSlug, mode, hlsUrl, reloadKey]);
+  }, [movieSlug, episodeSlug, mode, hlsUrl, reloadKey, resumeTime]);
 
-  // Resume playback position (HLS). iOS ignores currentTime before metadata is loaded.
+  // Robust resume playback position across all browsers and devices (iOS Safari, Android, Desktop)
   useEffect(() => {
-    if (mode !== "hls" || !resumeTime) return;
+    if (mode !== "hls" || !resumeTime || resumeTime <= 3) return;
     const video = videoRef.current;
     if (!video) return;
 
-    const applySeek = () => {
+    const performSeek = () => {
+      if (hasSoughtRef.current) return;
       try {
-        if (video.duration && resumeTime < video.duration) {
+        const dur = video.duration;
+        // Apply seek if duration is not yet known or resumeTime is within range
+        if (!dur || isNaN(dur) || !isFinite(dur) || resumeTime < dur) {
           video.currentTime = resumeTime;
+          if (Math.abs(video.currentTime - resumeTime) < 5) {
+            hasSoughtRef.current = true;
+          }
         }
-      } catch {}
+      } catch (err) {
+        console.warn("Seek error:", err);
+      }
     };
 
+    // 1. Immediate seek if ready
     if (video.readyState >= 1) {
-      applySeek();
-      return;
+      performSeek();
     }
 
-    video.addEventListener("loadedmetadata", applySeek, { once: true });
-    return () => video.removeEventListener("loadedmetadata", applySeek);
+    // 2. Lifecycle hooks
+    const onMeta = () => performSeek();
+    const onData = () => performSeek();
+    const onCanPlay = () => performSeek();
+    // 3. Crucial for iOS: user gesture triggers play, ensure seek applies
+    const onPlay = () => {
+      if (!hasSoughtRef.current && video.currentTime < 5) {
+        performSeek();
+      }
+    };
+    // 4. First timeupdate fallback
+    const onFirstTimeUpdate = () => {
+      if (!hasSoughtRef.current && video.currentTime < 3) {
+        performSeek();
+      }
+    };
+
+    video.addEventListener("loadedmetadata", onMeta);
+    video.addEventListener("loadeddata", onData);
+    video.addEventListener("canplay", onCanPlay);
+    video.addEventListener("play", onPlay);
+    video.addEventListener("timeupdate", onFirstTimeUpdate);
+
+    // Also attach to HLS instance if active
+    const hls = hlsRef.current;
+    if (hls) {
+      hls.on(Hls.Events.MANIFEST_PARSED, performSeek);
+      hls.on(Hls.Events.LEVEL_LOADED, performSeek);
+    }
+
+    return () => {
+      video.removeEventListener("loadedmetadata", onMeta);
+      video.removeEventListener("loadeddata", onData);
+      video.removeEventListener("canplay", onCanPlay);
+      video.removeEventListener("play", onPlay);
+      video.removeEventListener("timeupdate", onFirstTimeUpdate);
+      if (hls) {
+        hls.off(Hls.Events.MANIFEST_PARSED, performSeek);
+        hls.off(Hls.Events.LEVEL_LOADED, performSeek);
+      }
+    };
   }, [resumeTime, mode, hlsUrl, reloadKey]);
 
   const handleReload = () => {
@@ -327,8 +439,8 @@ function VideoPlayerCard({
         >
           {mode === "embed" ? (
             <iframe
-              key={`embed-${embedUrl}-${reloadKey}`}
-              src={embedUrl}
+              key={`embed-${embedUrlWithResume}-${reloadKey}`}
+              src={embedUrlWithResume}
               className="absolute inset-0 w-full h-full border-0 bg-black"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
               allowFullScreen

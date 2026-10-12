@@ -141,10 +141,28 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
     }
   };
 
-  const handleEpisodeSelect = (ep: EpisodeData) => {
+  const handleEpisodeSelect = async (ep: EpisodeData) => {
     setCurrentEpisode(ep);
-    setSeekTime(0);
-    setResumeNotice(null);
+    let pos = 0;
+    try {
+      const history = await historyStorage.getWatchHistory();
+      const existing = history[movieDetail.slug];
+      if (existing && existing.lastEpisodeSlug === ep.slug && existing.lastPositionSeconds > 10) {
+        pos = existing.lastPositionSeconds;
+        setSeekTime(pos);
+        const mins = Math.floor(pos / 60);
+        const secs = Math.floor(pos % 60);
+        const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+        const epLabel = ep.name.toLowerCase().includes('tập') ? ep.name : `Tập ${ep.name}`;
+        setResumeNotice(`✨ Chào Hải Yến! Đang mở ${epLabel} từ đoạn xem dở (${timeStr}).`);
+      } else {
+        setSeekTime(0);
+        setResumeNotice(null);
+      }
+    } catch {
+      setSeekTime(0);
+      setResumeNotice(null);
+    }
 
     const srv = servers[activeServerIndex] || servers[0];
     const totalCount = srv?.server_data?.length || 1;
@@ -158,7 +176,7 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
       year: movieDetail.year,
       lastEpisodeSlug: ep.slug,
       lastEpisodeName: ep.name,
-      lastPositionSeconds: 0,
+      lastPositionSeconds: pos,
       durationSeconds: 2700,
       totalEpisodes: totalCount,
     });
@@ -167,6 +185,7 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
   const handleTimeUpdate = useCallback(
     (position: number, duration: number) => {
       if (!currentEpisode || !movieDetail) return;
+      if (seekTime && seekTime > 15 && position < 10) return;
       const srv = servers[activeServerIndex] || servers[0];
       const totalCount = srv?.server_data?.length || 1;
 
@@ -184,7 +203,7 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
         totalEpisodes: totalCount,
       });
     },
-    [currentEpisode, movieDetail, servers, activeServerIndex]
+    [currentEpisode, movieDetail, servers, activeServerIndex, seekTime]
   );
 
   const currentServer = servers[activeServerIndex];

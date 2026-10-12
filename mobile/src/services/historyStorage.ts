@@ -87,6 +87,7 @@ export const historyStorage = {
     lastPositionSeconds: number;
     durationSeconds: number;
     totalEpisodes?: number;
+    forceReset?: boolean;
   }): Promise<void> {
     try {
       const session = await this.getUserSession();
@@ -94,10 +95,22 @@ export const historyStorage = {
 
       const duration = Math.max(1, data.durationSeconds);
       const position = Math.max(0, data.lastPositionSeconds);
-      const progressPercent = Math.min(100, Math.round((position / duration) * 1000) / 10);
 
       const history = await this.getWatchHistory();
       const existing = history[data.movieSlug];
+
+      // Protect against overwriting watched position during startup noise
+      if (
+        !data.forceReset &&
+        existing &&
+        existing.lastEpisodeSlug === data.lastEpisodeSlug &&
+        existing.lastPositionSeconds > 30 &&
+        position < 15
+      ) {
+        return;
+      }
+
+      const progressPercent = Math.min(100, Math.round((position / duration) * 1000) / 10);
       const watchedEpisodesSet = new Set<string>(existing?.watchedEpisodes || []);
 
       if (progressPercent >= 85) {
