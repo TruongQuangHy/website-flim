@@ -34,17 +34,16 @@ interface VideoPlayerProps {
 // 1. Removes unwanted filename overlays / gradient top bar (#player_top), and completely hides/destroys "Bỏ qua giới thiệu" / Skip Intro buttons
 // 2. Captures fullscreen clicks/touches on all web player controls (.item-max, .jw-icon-fullscreen, etc.)
 //    and instructs React Native to rotate to landscape smoothly without bounce loops.
-// 3. Tracks timeline / control bar visibility to synchronize the native "Thu nhỏ" button in fullscreen mode.
+// 3. Actively controls auto-hiding of the video player control toolbar (.art-bottom, .jw-controlbar, etc.)
+//    so users can watch full screen with zero obstruction, and synchronizes the native "Thu nhỏ" button.
 const INJECTED_JAVASCRIPT = `
 (function() {
-  // 1. Force remove #player_top, #video_mask, title overlays, and all Skip Intro elements
+  // 1. Force remove #player_top, title overlays, and all Skip Intro elements
   var style = document.createElement('style');
   style.innerHTML = \`
     #player_top,
     .bc-chrome-enter,
-    #video_mask,
     .art-vtitle-bar,
-    .art-mask:not(.art-mask-show),
     .video-info,
     .p_t-left,
     .p_t-right,
@@ -103,12 +102,45 @@ const INJECTED_JAVASCRIPT = `
       padding: 0 !important;
       z-index: 999999 !important;
     }
+
+    /* Active Auto-Hide CSS for video control toolbar */
+    html.rn-controls-hidden .art-bottom,
+    html.rn-controls-hidden .art-controls,
+    html.rn-controls-hidden .art-progress,
+    html.rn-controls-hidden .jw-controlbar,
+    html.rn-controls-hidden .dplayer-controller,
+    html.rn-controls-hidden .vjs-control-bar,
+    html.rn-controls-hidden [class*="control-bar"],
+    html.rn-controls-hidden [class*="controlbar"],
+    html.rn-controls-hidden [class*="bottom-control"] {
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      transform: translateY(10px) !important;
+      transition: opacity 0.3s ease-out, visibility 0.3s ease-out, transform 0.3s ease-out !important;
+    }
+
+    html.rn-controls-visible .art-bottom,
+    html.rn-controls-visible .art-controls,
+    html.rn-controls-visible .art-progress,
+    html.rn-controls-visible .jw-controlbar,
+    html.rn-controls-visible .dplayer-controller,
+    html.rn-controls-visible .vjs-control-bar,
+    html.rn-controls-visible [class*="control-bar"],
+    html.rn-controls-visible [class*="controlbar"],
+    html.rn-controls-visible [class*="bottom-control"] {
+      opacity: 1 !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+      transform: translateY(0) !important;
+      transition: opacity 0.2s ease-in, visibility 0.2s ease-in, transform 0.2s ease-in !important;
+    }
   \`;
   document.head.appendChild(style);
 
   function purgeBadOverlays() {
     var badEls = document.querySelectorAll(
-      '#player_top, .bc-chrome-enter, #video_mask, .art-vtitle-bar, .skip-buttons, .bc-skip-intro, .sb-button, .art-skip-intro, .skip-intro, [class*="skip-intro"], [id*="skip-intro"], [class*="skip_intro"], [id*="skip_intro"], [class*="skip-button"]'
+      '#player_top, .bc-chrome-enter, .art-vtitle-bar, .video-info, .skip-buttons, .bc-skip-intro, .sb-button, .art-skip-intro, .skip-intro, [class*="skip-intro"], [id*="skip-intro"], [class*="skip_intro"], [id*="skip_intro"], [class*="skip-button"]'
     );
     badEls.forEach(function(el) {
       el.style.setProperty('display', 'none', 'important');
@@ -152,88 +184,131 @@ const INJECTED_JAVASCRIPT = `
 
   // Safely notify React Native when user clicks fullscreen button in web player
   function sendToNative(msg) {
-    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-      window.ReactNativeWebView.postMessage(JSON.stringify(msg));
-    }
+    try {
+      var bridge = window.ReactNativeWebView || (window.top && window.top.ReactNativeWebView) || (window.parent && window.parent.ReactNativeWebView);
+      if (bridge && bridge.postMessage) {
+        bridge.postMessage(JSON.stringify(msg));
+      }
+    } catch(e) {}
   }
 
-  // 2. Track timeline / controls visibility in fullscreen mode
-  var lastControlsVisible = true;
-  var lastTouchTime = Date.now();
+  // 2. Active Auto-Hide Controller for Video Player Toolbar
+  var isControlsVisible = true;
+  var autoHideTimer = null;
+  var HIDE_DELAY = 3200; // 3.2 seconds
 
-  function checkTimelineVisibility() {
-    var isVisible = false;
+  function isVideoPlaying() {
+    var v = document.querySelector('video');
+    if (v) {
+      return !v.paused && !v.ended && v.currentTime > 0;
+    }
+    try {
+      var p = window.art || window.player || window.artplayer || window.artInstance;
+      if (p && typeof p.playing === 'boolean') return p.playing;
+      var jw = window.jwplayer && window.jwplayer('player');
+      if (jw && typeof jw.getState === 'function') return jw.getState() === 'playing';
+    } catch(e) {}
+    return true;
+  }
 
-    // Check JWPlayer
-    var jw = document.querySelector('.jwplayer');
-    if (jw) {
-      var isInactive = jw.classList.contains('jw-flag-user-inactive') || 
-                       jw.classList.contains('jw-flag-controls-hidden');
-      var cb = jw.querySelector('.jw-controlbar');
-      if (cb) {
-        var cStyle = window.getComputedStyle(cb);
-        var op = parseFloat(cStyle.opacity || '1');
-        isVisible = !isInactive && cStyle.display !== 'none' && cStyle.visibility !== 'hidden' && op > 0.05;
-      } else {
-        isVisible = !isInactive;
-      }
+  function setControlsState(show) {
+    isControlsVisible = show;
+    var root = document.documentElement;
+
+    if (show) {
+      root.classList.remove('rn-controls-hidden');
+      root.classList.add('rn-controls-visible');
+      try {
+        var p = window.art || window.player || window.artplayer || window.artInstance;
+        if (p && p.controls) p.controls.show = true;
+        var artEl = document.querySelector('.art-video-player');
+        if (artEl) {
+          artEl.classList.add('art-control-show');
+          artEl.classList.remove('art-hide-cursor');
+        }
+      } catch(e) {}
+      sendToNative({ type: 'controlsVisibility', visible: true });
+      scheduleAutoHide();
     } else {
-      // Check Artplayer
-      var art = document.querySelector('.art-video-player');
-      if (art) {
-        var artBottom = art.querySelector('.art-bottom');
-        if (artBottom) {
-          var bs = window.getComputedStyle(artBottom);
-          isVisible = bs.display !== 'none' && bs.visibility !== 'hidden' && parseFloat(bs.opacity || '1') > 0.05;
-        } else {
-          isVisible = art.classList.contains('art-control-show');
+      root.classList.add('rn-controls-hidden');
+      root.classList.remove('rn-controls-visible');
+      try {
+        var p = window.art || window.player || window.artplayer || window.artInstance;
+        if (p && p.controls) p.controls.show = false;
+        var artEl = document.querySelector('.art-video-player');
+        if (artEl) {
+          artEl.classList.remove('art-control-show');
+          artEl.classList.add('art-hide-cursor');
         }
-      } else {
-        // Generic player control bars
-        var bars = document.querySelectorAll(
-          '.jw-controlbar, .art-bottom, .art-controls, .dplayer-controller, .vjs-control-bar, [class*="controlbar"], [class*="control-bar"], [class*="bottom-control"], [class*="progress-bar"]'
-        );
-        if (bars.length > 0) {
-          for (var i = 0; i < bars.length; i++) {
-            var s = window.getComputedStyle(bars[i]);
-            if (s.display !== 'none' && s.visibility !== 'hidden' && parseFloat(s.opacity || '1') > 0.05) {
-              isVisible = true;
-              break;
-            }
-          }
-        } else {
-          // Fallback based on touch activity timeout (3.5s auto-hide)
-          isVisible = (Date.now() - lastTouchTime) < 3500;
-        }
+      } catch(e) {}
+      sendToNative({ type: 'controlsVisibility', visible: false });
+    }
+  }
+
+  function scheduleAutoHide() {
+    if (autoHideTimer) clearTimeout(autoHideTimer);
+    autoHideTimer = setTimeout(function() {
+      if (isVideoPlaying()) {
+        setControlsState(false);
       }
+    }, HIDE_DELAY);
+  }
+
+  function handleInteraction(e) {
+    var target = e.target;
+    // Check if user tapped inside the controls toolbar (seeking, pause, volume, settings, etc.)
+    var isControlBar = target && target.closest(
+      '.art-bottom, .art-controls, .jw-controlbar, .vjs-control-bar, [class*="controlbar"], [class*="control-bar"], button, input, .art-progress, [class*="progress"]'
+    );
+
+    if (isControlBar) {
+      if (!isControlsVisible) {
+        setControlsState(true);
+      } else {
+        scheduleAutoHide();
+      }
+      return;
     }
 
-    if (isVisible !== lastControlsVisible) {
-      lastControlsVisible = isVisible;
-      sendToNative({
-        type: 'controlsVisibility',
-        visible: isVisible
-      });
+    // User tapped anywhere else on the screen / video:
+    if (isControlsVisible) {
+      // If currently showing, tapping screen immediately hides them for quick fullscreen viewing
+      setControlsState(false);
+    } else {
+      // If hidden, tapping screen immediately reveals them
+      setControlsState(true);
     }
   }
 
-  function handleUserTouch() {
-    lastTouchTime = Date.now();
-    if (!lastControlsVisible) {
-      lastControlsVisible = true;
-      sendToNative({
-        type: 'controlsVisibility',
-        visible: true
+  window.addEventListener('touchstart', handleInteraction, { capture: true, passive: true });
+  window.addEventListener('click', handleInteraction, { capture: true, passive: true });
+
+  // Monitor video playback events
+  function setupVideoEvents() {
+    var v = document.querySelector('video');
+    if (v && !v.__rnEventsAttached) {
+      v.__rnEventsAttached = true;
+      v.addEventListener('play', function() {
+        scheduleAutoHide();
+      });
+      v.addEventListener('pause', function() {
+        if (autoHideTimer) clearTimeout(autoHideTimer);
+        setControlsState(true);
+      });
+      v.addEventListener('playing', function() {
+        scheduleAutoHide();
       });
     }
   }
+  setInterval(setupVideoEvents, 1000);
+  setupVideoEvents();
 
-  window.addEventListener('touchstart', handleUserTouch, { capture: true, passive: true });
-  window.addEventListener('touchend', handleUserTouch, { capture: true, passive: true });
-  window.addEventListener('click', handleUserTouch, { capture: true, passive: true });
-  window.addEventListener('pointerdown', handleUserTouch, { capture: true, passive: true });
-
-  setInterval(checkTimelineVisibility, 300);
+  // Initial auto-hide trigger: 2.8 seconds after video playback begins
+  setTimeout(function() {
+    if (isVideoPlaying()) {
+      setControlsState(false);
+    }
+  }, 2800);
 
   function getFullscreenAction(target) {
     if (!target) return null;
@@ -513,6 +588,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             javaScriptEnabled={true}
             domStorageEnabled={true}
             injectedJavaScript={INJECTED_JAVASCRIPT}
+            injectedJavaScriptForMainFrameOnly={false}
             onMessage={handleMessage}
             onLoadStart={() => setLoading(true)}
             onLoadEnd={handleLoadEnd}
