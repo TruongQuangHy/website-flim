@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   ScrollView,
   View,
@@ -44,6 +44,7 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
   const [showFullContent, setShowFullContent] = useState(false);
   const [seekTime, setSeekTime] = useState<number>(initialSeekTime || 0);
   const [resumeNotice, setResumeNotice] = useState<string | null>(null);
+  const lastSaveTimeRef = useRef<number>(0);
 
   const formatSeconds = (sec: number) => {
     if (!sec || isNaN(sec)) return '00:00';
@@ -186,6 +187,14 @@ export const MovieDetailScreen: React.FC<MovieDetailScreenProps> = ({
     (position: number, duration: number) => {
       if (!currentEpisode || !movieDetail) return;
       if (seekTime && seekTime > 15 && position < 10) return;
+
+      const now = Date.now();
+      // Throttle watch history persistence to disk and network (every 15s) to avoid micro-stutters during playback
+      if (now - lastSaveTimeRef.current < 15000) {
+        return;
+      }
+      lastSaveTimeRef.current = now;
+
       const srv = servers[activeServerIndex] || servers[0];
       const totalCount = srv?.server_data?.length || 1;
 

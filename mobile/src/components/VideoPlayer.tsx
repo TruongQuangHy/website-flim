@@ -36,11 +36,22 @@ interface VideoPlayerProps {
 //    and instructs React Native to rotate to landscape smoothly without bounce loops.
 // 3. Actively controls auto-hiding of the video player control toolbar (.art-bottom, .jw-controlbar, etc.)
 //    so users can watch full screen with zero obstruction, and synchronizes the native "Thu nhỏ" button.
+// 4. Fully optimized for zero lag: GPU hardware layer for <video>, zero heavy continuous intervals, throttled bridge updates.
 const INJECTED_JAVASCRIPT = `
 (function() {
-  // 1. Force remove #player_top, title overlays, and all Skip Intro elements
+  // 1. Force remove #player_top, title overlays, and all Skip Intro elements with pure GPU/CSS
   var style = document.createElement('style');
   style.innerHTML = \`
+    * {
+      -webkit-tap-highlight-color: transparent !important;
+    }
+
+    video {
+      transform: translateZ(0) !important;
+      -webkit-transform: translateZ(0) !important;
+      will-change: transform !important;
+    }
+
     #player_top,
     .bc-chrome-enter,
     .art-vtitle-bar,
@@ -138,49 +149,25 @@ const INJECTED_JAVASCRIPT = `
   \`;
   document.head.appendChild(style);
 
-  function purgeBadOverlays() {
-    var badEls = document.querySelectorAll(
-      '#player_top, .bc-chrome-enter, .art-vtitle-bar, .video-info, .skip-buttons, .bc-skip-intro, .sb-button, .art-skip-intro, .skip-intro, [class*="skip-intro"], [id*="skip-intro"], [class*="skip_intro"], [id*="skip_intro"], [class*="skip-button"]'
-    );
-    badEls.forEach(function(el) {
-      el.style.setProperty('display', 'none', 'important');
-      el.style.setProperty('opacity', '0', 'important');
-      el.style.setProperty('visibility', 'hidden', 'important');
-      el.style.setProperty('pointer-events', 'none', 'important');
-      if (el.parentNode && (
-        el.classList.contains('skip-buttons') ||
-        el.classList.contains('bc-skip-intro') ||
-        el.classList.contains('sb-button') ||
-        el.classList.contains('art-skip-intro')
-      )) {
-        try { el.parentNode.removeChild(el); } catch(e) {}
-      }
-    });
-
-    // Also remove any button or element whose visible text is "Bỏ qua giới thiệu" / "Bỏ qua intro"
-    var allEls = document.querySelectorAll('button, div, span, a');
-    allEls.forEach(function(el) {
-      if (el.children && el.children.length > 2) return;
-      var txt = (el.textContent || '').trim().toLowerCase();
-      if (
-        txt === 'bỏ qua giới thiệu' ||
-        txt === 'bỏ qua intro' ||
-        txt === 'skip intro' ||
-        txt.indexOf('bỏ qua giới thiệu') !== -1 ||
-        txt.indexOf('bỏ qua intro') !== -1
-      ) {
-        el.style.setProperty('display', 'none', 'important');
-        el.style.setProperty('opacity', '0', 'important');
-        el.style.setProperty('visibility', 'hidden', 'important');
-        el.style.setProperty('pointer-events', 'none', 'important');
-        if (el.parentNode) {
-          try { el.parentNode.removeChild(el); } catch(e) {}
+  // Lightweight one-shot cleanup (targeted to buttons/links only, runs 3 times during load then stops completely)
+  function cleanupBadButtons() {
+    try {
+      var btns = document.querySelectorAll('button, a, [role="button"], .art-btn');
+      for (var i = 0; i < btns.length; i++) {
+        var el = btns[i];
+        var txt = (el.textContent || '').trim().toLowerCase();
+        if (txt.indexOf('bỏ qua') !== -1 || txt.indexOf('skip') !== -1) {
+          el.style.setProperty('display', 'none', 'important');
+          if (el.parentNode) {
+            try { el.parentNode.removeChild(el); } catch(e) {}
+          }
         }
       }
-    });
+    } catch(e) {}
   }
-  setInterval(purgeBadOverlays, 400);
-  purgeBadOverlays();
+  setTimeout(cleanupBadButtons, 600);
+  setTimeout(cleanupBadButtons, 1800);
+  setTimeout(cleanupBadButtons, 3500);
 
   // Safely notify React Native when user clicks fullscreen button in web player
   function sendToNative(msg) {
@@ -283,8 +270,24 @@ const INJECTED_JAVASCRIPT = `
   window.addEventListener('touchstart', handleInteraction, { capture: true, passive: true });
   window.addEventListener('click', handleInteraction, { capture: true, passive: true });
 
-  // Monitor video playback events
-  function setupVideoEvents() {
+  // 3. Efficient, throttled time reporting and auto-seek without background CPU drain
+  var lastReportedTime = 0;
+  var hasSeeked = false;
+
+  function reportTimeUpdate(pos, dur) {
+    var now = Date.now();
+    // Throttle to every 12 seconds to prevent bridge spam and disk I/O lag
+    if (now - lastReportedTime > 12000 && pos > 0 && dur > 0) {
+      lastReportedTime = now;
+      sendToNative({
+        type: 'timeUpdate',
+        position: Math.floor(pos),
+        duration: Math.floor(dur)
+      });
+    }
+  }
+
+  function initVideo() {
     var v = document.querySelector('video');
     if (v && !v.__rnEventsAttached) {
       v.__rnEventsAttached = true;
@@ -298,10 +301,26 @@ const INJECTED_JAVASCRIPT = `
       v.addEventListener('playing', function() {
         scheduleAutoHide();
       });
+      v.addEventListener('timeupdate', function() {
+        reportTimeUpdate(v.currentTime, v.duration);
+        if (!hasSeeked && window.__targetSeekTime && window.__targetSeekTime > 5 && v.duration > 10) {
+          v.currentTime = window.__targetSeekTime;
+          hasSeeked = true;
+        }
+      });
+      return true;
     }
+    return false;
   }
-  setInterval(setupVideoEvents, 1000);
-  setupVideoEvents();
+
+  var initVideoAttempts = 0;
+  var initVideoInterval = setInterval(function() {
+    initVideoAttempts++;
+    if (initVideo() || initVideoAttempts > 15) {
+      clearInterval(initVideoInterval);
+    }
+  }, 1000);
+  initVideo();
 
   // Initial auto-hide trigger: 2.8 seconds after video playback begins
   setTimeout(function() {
@@ -375,8 +394,7 @@ const INJECTED_JAVASCRIPT = `
     }
   };
 
-  // 3. Auto-seek and periodic time reporting
-  var hasSeeked = false;
+  // JWPlayer fallback for periodic time reporting and seek
   function checkJWPlayer() {
     try {
       var p = (window.jwplayer && window.jwplayer('player')) || window.playerInstance;
@@ -389,17 +407,11 @@ const INJECTED_JAVASCRIPT = `
           hasSeeked = true;
         }
 
-        if (pos > 0 && dur > 0) {
-          sendToNative({
-            type: 'timeUpdate',
-            position: Math.floor(pos),
-            duration: Math.floor(dur)
-          });
-        }
+        reportTimeUpdate(pos, dur);
       }
     } catch(err) {}
   }
-  setInterval(checkJWPlayer, 4000);
+  setInterval(checkJWPlayer, 12000);
 
   true;
 })();
@@ -584,9 +596,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             source={{ uri: videoUri }}
             style={isFullscreen ? styles.fullscreenWebview : styles.webview}
             allowsFullscreenVideo={true}
+            allowsInlineMediaPlayback={true}
             mediaPlaybackRequiresUserAction={false}
             javaScriptEnabled={true}
             domStorageEnabled={true}
+            cacheEnabled={true}
             injectedJavaScript={INJECTED_JAVASCRIPT}
             injectedJavaScriptForMainFrameOnly={false}
             onMessage={handleMessage}
@@ -595,6 +609,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             originWhitelist={['*']}
             setSupportMultipleWindows={false}
             nestedScrollEnabled={false}
+            scrollEnabled={false}
+            bounces={false}
+            overScrollMode="never"
+            androidLayerType="hardware"
+            mixedContentMode="always"
+            renderToHardwareTextureAndroid={true}
             userAgent="Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
           />
         ) : (
