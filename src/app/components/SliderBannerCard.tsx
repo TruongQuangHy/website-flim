@@ -55,7 +55,7 @@ function SliderBannerCard({
             : null;
 
           return (
-            <SwiperSlide key={item._id} className="relative !bg-[#0a0a0a] h-full">
+            <SwiperSlide key={`${item._id || item.slug}-${idx}`} className="relative !bg-[#0a0a0a] h-full">
               {bannerImg && (
                 <Image
                   src={bannerImg}

@@ -127,8 +127,8 @@ export default function EpisodePicker({
       : filteredEpisodes;
 
   const handleEpisodeClick = (ep: VsmovEpisodeItem) => {
-    // VSMOV prefers link_embed, fallback to link_m3u8
-    const link = ep.link_embed || ep.link_m3u8 || "";
+    // Prefer direct HLS stream for fast playback and precise seek
+    const link = ep.link_m3u8 || ep.link_embed || "";
     onSelect(link, ep.slug, ep.name);
   };
 

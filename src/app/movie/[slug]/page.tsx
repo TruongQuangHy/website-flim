@@ -97,7 +97,8 @@ export default function MoviePage({ params }: MoviePageProps) {
         setCdnImage(cdn);
 
         // Pick episode: Check if user Hai Yen has history for this movie
-        const movieHistory = user?.isLoggedIn ? history[slug] : null;
+        const storeState = useUserHistoryStore.getState();
+        const movieHistory = storeState.user?.isLoggedIn ? storeState.history[slug] : null;
         let targetEpisode: VsmovEpisodeItem | undefined;
 
         if (movieHistory?.lastEpisodeSlug && item.episodes?.length) {
@@ -173,11 +174,50 @@ export default function MoviePage({ params }: MoviePageProps) {
     };
   }, [slug]);
 
+  // Current active server based on selected episode (or default to first server)
+  const currentServer = useMemo(() => {
+    if (!movieDetails?.episodes?.length) return undefined;
+    for (const srv of movieDetails.episodes) {
+      if (srv.server_data?.some((ep) => ep.slug === selectedEpisodeSlug)) {
+        return srv;
+      }
+    }
+    return movieDetails.episodes[0];
+  }, [movieDetails, selectedEpisodeSlug]);
+
   // Flattened episode list for current active server
   const allCurrentEpisodes: VsmovEpisodeItem[] = useMemo(() => {
-    if (!movieDetails?.episodes?.length) return [];
-    return movieDetails.episodes[0]?.server_data || [];
-  }, [movieDetails]);
+    return currentServer?.server_data || [];
+  }, [currentServer]);
+
+  // Late history sync listener: if Supabase sync finishes after initial page load
+  useEffect(() => {
+    if (!user?.isLoggedIn || !movieDetails || resumeTime > 0) return;
+    const movieHistory = history[slug];
+    if (movieHistory && movieHistory.lastPositionSeconds > 10) {
+      if (movieHistory.lastEpisodeSlug && movieHistory.lastEpisodeSlug !== selectedEpisodeSlug) {
+        for (const srv of movieDetails.episodes || []) {
+          const ep = srv.server_data?.find((e) => e.slug === movieHistory.lastEpisodeSlug);
+          if (ep) {
+            setSelectedEpisodeSlug(ep.slug);
+            setSelectedEpisodeName(ep.name);
+            setCurrentVideo(ep.link_m3u8 || ep.link_embed || "");
+            break;
+          }
+        }
+      }
+      setResumeTime(movieHistory.lastPositionSeconds);
+      currentPosRef.current = movieHistory.lastPositionSeconds;
+      const mins = Math.floor(movieHistory.lastPositionSeconds / 60);
+      const secs = Math.floor(movieHistory.lastPositionSeconds % 60);
+      const timeStr = `${mins}:${secs.toString().padStart(2, "0")}`;
+      const epName = movieHistory.lastEpisodeName || "Tập";
+      const epLabel = epName.toLowerCase().includes("tập") ? epName : `Tập ${epName}`;
+      setResumeNotice(
+        `✨ Chào Hải Yến! Đang tự động mở ${epLabel} từ đoạn xem dở (${timeStr}).`
+      );
+    }
+  }, [user?.isLoggedIn, history, slug, movieDetails, resumeTime, selectedEpisodeSlug]);
 
   const currentEpisodeIndex = useMemo(() => {
     return allCurrentEpisodes.findIndex((ep) => ep.slug === selectedEpisodeSlug);
@@ -307,31 +347,54 @@ export default function MoviePage({ params }: MoviePageProps) {
     }, 100);
   };
 
-  // Save watch progress on unmount / navigation
+  // Keep latest state in ref to avoid re-triggering cleanup on every render
+  const latestProgressDataRef = useRef({
+    userLoggedIn: Boolean(user?.isLoggedIn),
+    movieDetails,
+    slug,
+    cdnImage,
+    selectedEpisodeSlug,
+    selectedEpisodeName,
+    totalEpisodes: allCurrentEpisodes.length || 1,
+    saveProgress,
+  });
+  latestProgressDataRef.current = {
+    userLoggedIn: Boolean(user?.isLoggedIn),
+    movieDetails,
+    slug,
+    cdnImage,
+    selectedEpisodeSlug,
+    selectedEpisodeName,
+    totalEpisodes: allCurrentEpisodes.length || 1,
+    saveProgress,
+  };
+
+  // Save watch progress on actual component unmount / page navigation
   useEffect(() => {
     return () => {
+      const data = latestProgressDataRef.current;
       if (
-        user?.isLoggedIn &&
-        movieDetails &&
-        selectedEpisodeSlug &&
+        data.userLoggedIn &&
+        data.movieDetails &&
+        data.selectedEpisodeSlug &&
         currentPosRef.current > 10
       ) {
-        saveProgress({
-          movieSlug: slug,
-          movieName: movieDetails.name,
-          originName: movieDetails.origin_name,
-          posterUrl: getMovieImageUrl(movieDetails, cdnImage),
-          quality: movieDetails.quality,
-          year: movieDetails.year,
-          lastEpisodeSlug: selectedEpisodeSlug,
-          lastEpisodeName: selectedEpisodeName || "Tập",
+        data.saveProgress({
+          movieSlug: data.slug,
+          movieName: data.movieDetails.name,
+          originName: data.movieDetails.origin_name,
+          posterUrl: getMovieImageUrl(data.movieDetails, data.cdnImage),
+          quality: data.movieDetails.quality,
+          year: data.movieDetails.year,
+          lastEpisodeSlug: data.selectedEpisodeSlug,
+          lastEpisodeName: data.selectedEpisodeName || "Tập",
           lastPositionSeconds: currentPosRef.current,
           durationSeconds: 2700,
-          totalEpisodes: allCurrentEpisodes.length || 1,
+          totalEpisodes: data.totalEpisodes,
         });
       }
     };
-  }, [user?.isLoggedIn, movieDetails, selectedEpisodeSlug, selectedEpisodeName]);
+  }, []);
 
   const lastSavedTimeRef = useRef<number>(0);
 
@@ -410,11 +473,23 @@ export default function MoviePage({ params }: MoviePageProps) {
     }
   };
 
-  const handleShareMovie = () => {
-    if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(window.location.href);
+  const handleShareMovie = async () => {
+    if (typeof window === "undefined") return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(window.location.href);
+      } else {
+        const input = document.createElement("input");
+        input.value = window.location.href;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        document.body.removeChild(input);
+      }
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2500);
+    } catch {
+      // Fallback
     }
   };
 
@@ -473,7 +548,7 @@ export default function MoviePage({ params }: MoviePageProps) {
   const actors = moviePeoples.filter(
     (person) => person.known_for_department === "Acting"
   );
-  const currentServerName = movieDetails.episodes?.[0]?.server_name || "VIP Server";
+  const currentServerName = currentServer?.server_name || "VIP Server";
   const tmdbRating = movieDetails.tmdb?.vote_average
     ? Number(movieDetails.tmdb.vote_average).toFixed(1)
     : null;

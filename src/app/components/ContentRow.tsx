@@ -116,7 +116,7 @@ export default function ContentRow({
           className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory hide-scrollbar pb-4 pl-1 pr-4"
         >
           {displayItems.map((item, idx) => (
-            <div key={item._id} className="snap-start">
+            <div key={`${item._id || item.slug}-${idx}`} className="snap-start">
               <MovieCard
                 item={item}
                 cdnImage={cdnImage}

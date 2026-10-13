@@ -29,6 +29,11 @@ export default function CategorySlugPage({ params }: PageProps) {
     useStore();
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Reset page when navigating to a different category or slug
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [category, slug]);
+
   const listData = listDataBySlug[slug];
   const isLoading = isLoadingList[slug] || false;
 
@@ -51,7 +56,14 @@ export default function CategorySlugPage({ params }: PageProps) {
       }
     };
     fetchListData();
-  }, [category, slug, currentPage, setListData, setIsLoadingList]);
+  }, [category, slug, currentPage, setListData, setIsLoadingList, router]);
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -108,9 +120,9 @@ export default function CategorySlugPage({ params }: PageProps) {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4">
-        {listData.items.map((item) => (
+        {listData.items.map((item, idx) => (
           <MovieCard
-            key={item._id}
+            key={`${item._id || item.slug}-${idx}`}
             item={item}
             cdnImage={listData.appDomains.cdnImage}
             className="w-full"
@@ -123,7 +135,7 @@ export default function CategorySlugPage({ params }: PageProps) {
           <PaginationContent className="flex-wrap justify-center gap-1">
             <PaginationItem>
               <PaginationLink
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                 className={`flex items-center gap-1 ${
                   currentPage === 1
                     ? "pointer-events-none opacity-50"
@@ -138,7 +150,7 @@ export default function CategorySlugPage({ params }: PageProps) {
             {currentPage > 2 && (
               <PaginationItem>
                 <PaginationLink
-                  onClick={() => setCurrentPage(1)}
+                  onClick={() => handlePageChange(1)}
                   isActive={currentPage === 1}
                   className="cursor-pointer"
                 >
@@ -156,7 +168,7 @@ export default function CategorySlugPage({ params }: PageProps) {
             {currentPage > 1 && (
               <PaginationItem>
                 <PaginationLink
-                  onClick={() => setCurrentPage(currentPage - 1)}
+                  onClick={() => handlePageChange(currentPage - 1)}
                   className="cursor-pointer"
                 >
                   {currentPage - 1}
@@ -176,7 +188,7 @@ export default function CategorySlugPage({ params }: PageProps) {
             {currentPage < totalPages && (
               <PaginationItem>
                 <PaginationLink
-                  onClick={() => setCurrentPage(currentPage + 1)}
+                  onClick={() => handlePageChange(currentPage + 1)}
                   className="cursor-pointer"
                 >
                   {currentPage + 1}
@@ -193,7 +205,7 @@ export default function CategorySlugPage({ params }: PageProps) {
             {currentPage < totalPages - 1 && (
               <PaginationItem>
                 <PaginationLink
-                  onClick={() => setCurrentPage(totalPages)}
+                  onClick={() => handlePageChange(totalPages)}
                   isActive={currentPage === totalPages}
                   className="cursor-pointer"
                 >
@@ -205,7 +217,7 @@ export default function CategorySlugPage({ params }: PageProps) {
             <PaginationItem>
               <PaginationLink
                 onClick={() =>
-                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  handlePageChange(Math.min(totalPages, currentPage + 1))
                 }
                 className={`flex items-center gap-1 ${
                   currentPage === totalPages

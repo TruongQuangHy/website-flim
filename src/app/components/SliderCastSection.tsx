@@ -65,7 +65,12 @@ export default function SliderCastSection({ actors }: SliderCastSectionProps) {
               <div className="size-20 sm:size-24 border-2 border-white/10 rounded-full overflow-hidden bg-[#1a1a1a] shrink-0">
                 {actor.profile_path ? (
                   <Image
-                    src={`https://image.tmdb.org/t/p/w185${actor.profile_path}`}
+                    src={
+                      actor.profile_path.startsWith("http://") ||
+                      actor.profile_path.startsWith("https://")
+                        ? actor.profile_path
+                        : `https://image.tmdb.org/t/p/w185${actor.profile_path}`
+                    }
                     alt={actor.name}
                     width={96}
                     height={96}

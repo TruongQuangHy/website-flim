@@ -58,6 +58,21 @@ const nextConfig: NextConfig = {
         hostname: "*.motphimc.pw",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "website-flim.vercel.app",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.vercel.app",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/**",
+      },
     ],
   },
   experimental: {

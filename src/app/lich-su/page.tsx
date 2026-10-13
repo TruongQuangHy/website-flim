@@ -293,7 +293,11 @@ export default function WatchHistoryPage() {
                 <div className="relative aspect-video w-full bg-black/60 overflow-hidden">
                   {item.posterUrl ? (
                     <Image
-                      src={item.posterUrl}
+                      src={
+                        item.posterUrl.includes("website-flim.vercel.app/")
+                          ? item.posterUrl.replace(/^https?:\/\/website-flim\.vercel\.app/i, "")
+                          : item.posterUrl
+                      }
                       alt={item.movieName}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-500"

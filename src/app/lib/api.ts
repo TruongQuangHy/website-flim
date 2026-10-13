@@ -69,6 +69,11 @@ export function getMovieImageUrl(
   const target = thumb || poster;
   if (!target) return fallback;
 
+  // Convert our own deployed domain back to local relative path
+  if (target.includes("website-flim.vercel.app/")) {
+    return target.replace(/^https?:\/\/website-flim\.vercel\.app/i, "");
+  }
+
   // Local static asset (e.g. /logo.png)
   if (target.startsWith("/")) {
     return target;

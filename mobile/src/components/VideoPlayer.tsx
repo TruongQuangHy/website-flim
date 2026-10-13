@@ -32,8 +32,7 @@ interface VideoPlayerProps {
 
 // Injected JavaScript inside the video embed page:
 // 1. Removes unwanted filename overlays / gradient top bar (#player_top) that covered half the video
-// 2. Makes the "Bỏ qua giới thiệu" button 100% touch-responsive on mobile
-// 3. Captures fullscreen clicks/touches on all web player controls (.item-max, .jw-icon-fullscreen, etc.)
+// 2. Captures fullscreen clicks/touches on all web player controls (.item-max, .jw-icon-fullscreen, etc.)
 //    and instructs React Native to rotate to landscape smoothly without bounce loops.
 const INJECTED_JAVASCRIPT = `
 (function() {
@@ -85,16 +84,6 @@ const INJECTED_JAVASCRIPT = `
       padding: 0 !important;
       z-index: 999999 !important;
     }
-
-    .skip-buttons, .bc-skip-intro, .sb-button, .skip-10-prev, .skip-10-next {
-      pointer-events: auto !important;
-      z-index: 2147483647 !important;
-      cursor: pointer !important;
-      touch-action: manipulation !important;
-      user-select: none !important;
-      -webkit-user-select: none !important;
-      -webkit-tap-highlight-color: transparent !important;
-    }
   \`;
   document.head.appendChild(style);
 
@@ -110,47 +99,7 @@ const INJECTED_JAVASCRIPT = `
   setInterval(purgeBadOverlays, 800);
   purgeBadOverlays();
 
-  function executeSkipIntro() {
-    try {
-      var introSec = 85;
-      if (typeof window.bcGetIntroSkipSec === 'function') {
-        var s = window.bcGetIntroSkipSec();
-        if (s > 0) introSec = s;
-      }
-      var p = (window.jwplayer && window.jwplayer('player')) || window.playerInstance;
-      if (p && typeof p.seek === 'function') {
-        p.seek(introSec);
-        if (typeof p.play === 'function') p.play(true);
-      }
-    } catch (err) {}
-    var wraps = document.querySelectorAll('.skip-buttons, .bc-skip-intro');
-    wraps.forEach(function(el) {
-      el.style.display = 'none';
-      el.setAttribute('aria-hidden', 'true');
-    });
-    window.introSkipped = true;
-  }
-
-  // Handle both touch and click for maximum reliability on mobile
-  document.addEventListener('touchend', function(e) {
-    var target = e.target;
-    if (target && (target.closest('.bc-skip-intro') || target.closest('.skip-buttons'))) {
-      e.preventDefault();
-      e.stopPropagation();
-      executeSkipIntro();
-    }
-  }, { capture: true, passive: false });
-
-  document.addEventListener('click', function(e) {
-    var target = e.target;
-    if (target && (target.closest('.bc-skip-intro') || target.closest('.skip-buttons'))) {
-      e.preventDefault();
-      e.stopPropagation();
-      executeSkipIntro();
-    }
-  }, { capture: true, passive: false });
-
-  // 2. Safely notify React Native when user clicks fullscreen button in web player
+  // Safely notify React Native when user clicks fullscreen button in web player
   function sendToNative(msg) {
     if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
       window.ReactNativeWebView.postMessage(JSON.stringify(msg));
@@ -334,27 +283,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   };
 
-  // Skip Intro via native button action
-  const handleNativeSkipIntro = () => {
-    webViewRef.current?.injectJavaScript(`
-      (function() {
-        try {
-          var p = (window.jwplayer && window.jwplayer('player')) || window.playerInstance;
-          if (p) {
-            var cur = p.getPosition() || 0;
-            p.seek(cur + 85);
-            p.play(true);
-          }
-          var wraps = document.querySelectorAll('.skip-buttons, .bc-skip-intro');
-          wraps.forEach(function(el) {
-            el.style.display = 'none';
-          });
-        } catch(e) {}
-      })();
-      true;
-    `);
-  };
-
   // Handle messages from WebView (e.g. user tapped fullscreen icon on video)
   const handleMessage = async (event: any) => {
     try {
@@ -485,15 +413,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               <Ionicons name="contract" size={20} color="#FFF" />
               <Text style={styles.fullscreenBtnText}>Thu nhỏ</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.fullscreenSkipBtn}
-              onPress={handleNativeSkipIntro}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="play-forward" size={16} color="#FFF" />
-              <Text style={styles.fullscreenBtnText}>Bỏ qua intro</Text>
-            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -510,20 +429,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </View>
 
             <View style={styles.controlActions}>
-              {/* Native Skip Intro button */}
-              <TouchableOpacity
-                style={styles.skipIntroButton}
-                onPress={handleNativeSkipIntro}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name="play-forward-outline"
-                  size={15}
-                  color="#FFF"
-                />
-                <Text style={styles.skipIntroText}>Bỏ qua intro</Text>
-              </TouchableOpacity>
-
               {/* Reload Button */}
               <TouchableOpacity
                 style={styles.actionBtn}
@@ -674,15 +579,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  fullscreenSkipBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(229, 9, 20, 0.85)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
   fullscreenBtnText: {
     color: '#FFF',
     fontSize: 12,
@@ -718,20 +614,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-  },
-  skipIntroButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: THEME.colors.primary,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 6,
-  },
-  skipIntroText: {
-    color: '#FFF',
-    fontSize: 11,
-    fontWeight: '700',
   },
   actionBtn: {
     flexDirection: 'row',

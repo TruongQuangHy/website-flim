@@ -110,7 +110,7 @@ export function SearchBar() {
                 {searchResults.map((movie) => (
                   <Link
                     href={`/movie/${movie.slug}`}
-                    key={movie._id}
+                    key={movie._id || movie.slug}
                     onClick={() => setOpen(false)}
                     className="flex gap-3 w-full rounded-lg p-2 hover:bg-white/10 transition-colors group"
                   >
