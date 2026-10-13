@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,18 @@ export const EpisodePicker: React.FC<EpisodePickerProps> = ({
 }) => {
   const [activeChunk, setActiveChunk] = useState(0);
   const [search, setSearch] = useState('');
+
+  // Auto switch chunk if active episode is in another chunk
+  useEffect(() => {
+    if (!currentEpisode || !episodes.length) return;
+    const idx = episodes.findIndex(
+      (ep) => ep.slug === currentEpisode.slug || ep.name === currentEpisode.name
+    );
+    if (idx !== -1) {
+      const targetChunk = Math.floor(idx / CHUNK_SIZE);
+      setActiveChunk(targetChunk);
+    }
+  }, [currentEpisode, episodes]);
 
   if (!episodes || episodes.length === 0) {
     return (

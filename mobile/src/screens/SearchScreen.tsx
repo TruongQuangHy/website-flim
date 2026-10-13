@@ -141,7 +141,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
       {!loading && results.length > 0 && (
         <FlatList
           data={results}
-          keyExtractor={(item) => item._id || item.slug}
+          keyExtractor={(item, idx) => `${item._id || item.slug}-${idx}`}
           numColumns={3}
           contentContainerStyle={styles.gridContent}
           initialNumToRender={9}

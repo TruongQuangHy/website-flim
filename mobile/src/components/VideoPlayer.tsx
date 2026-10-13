@@ -31,12 +31,13 @@ interface VideoPlayerProps {
 }
 
 // Injected JavaScript inside the video embed page:
-// 1. Removes unwanted filename overlays / gradient top bar (#player_top) that covered half the video
+// 1. Removes unwanted filename overlays / gradient top bar (#player_top), and completely hides/destroys "Bỏ qua giới thiệu" / Skip Intro buttons
 // 2. Captures fullscreen clicks/touches on all web player controls (.item-max, .jw-icon-fullscreen, etc.)
 //    and instructs React Native to rotate to landscape smoothly without bounce loops.
+// 3. Tracks timeline / control bar visibility to synchronize the native "Thu nhỏ" button in fullscreen mode.
 const INJECTED_JAVASCRIPT = `
 (function() {
-  // 1. Force remove #player_top, #video_mask, title overlays that covered half of video
+  // 1. Force remove #player_top, #video_mask, title overlays, and all Skip Intro elements
   var style = document.createElement('style');
   style.innerHTML = \`
     #player_top,
@@ -46,16 +47,34 @@ const INJECTED_JAVASCRIPT = `
     .art-mask:not(.art-mask-show),
     .video-info,
     .p_t-left,
-    .p_t-right {
+    .p_t-right,
+    .skip-buttons,
+    .bc-skip-intro,
+    .sb-button,
+    .art-skip-intro,
+    .skip-intro,
+    .skip-intro-btn,
+    .skip_intro,
+    .skip-button,
+    .skip-10-prev,
+    .skip-10-next,
+    [class*="skip-intro"],
+    [class*="skip_intro"],
+    [class*="skip-button"],
+    [id*="skip-intro"],
+    [id*="skip_intro"],
+    [id*="skip-button"] {
       display: none !important;
       opacity: 0 !important;
       visibility: hidden !important;
       height: 0 !important;
+      width: 0 !important;
       min-height: 0 !important;
       max-height: 0 !important;
       padding: 0 !important;
       margin: 0 !important;
       pointer-events: none !important;
+      overflow: hidden !important;
     }
 
     html, body, #rp-player, .main-player, #player {
@@ -88,15 +107,47 @@ const INJECTED_JAVASCRIPT = `
   document.head.appendChild(style);
 
   function purgeBadOverlays() {
-    var badEls = document.querySelectorAll('#player_top, .bc-chrome-enter, #video_mask, .art-vtitle-bar');
+    var badEls = document.querySelectorAll(
+      '#player_top, .bc-chrome-enter, #video_mask, .art-vtitle-bar, .skip-buttons, .bc-skip-intro, .sb-button, .art-skip-intro, .skip-intro, [class*="skip-intro"], [id*="skip-intro"], [class*="skip_intro"], [id*="skip_intro"], [class*="skip-button"]'
+    );
     badEls.forEach(function(el) {
-      el.style.display = 'none';
-      el.style.opacity = '0';
-      el.style.height = '0';
-      el.style.pointerEvents = 'none';
+      el.style.setProperty('display', 'none', 'important');
+      el.style.setProperty('opacity', '0', 'important');
+      el.style.setProperty('visibility', 'hidden', 'important');
+      el.style.setProperty('pointer-events', 'none', 'important');
+      if (el.parentNode && (
+        el.classList.contains('skip-buttons') ||
+        el.classList.contains('bc-skip-intro') ||
+        el.classList.contains('sb-button') ||
+        el.classList.contains('art-skip-intro')
+      )) {
+        try { el.parentNode.removeChild(el); } catch(e) {}
+      }
+    });
+
+    // Also remove any button or element whose visible text is "Bỏ qua giới thiệu" / "Bỏ qua intro"
+    var allEls = document.querySelectorAll('button, div, span, a');
+    allEls.forEach(function(el) {
+      if (el.children && el.children.length > 2) return;
+      var txt = (el.textContent || '').trim().toLowerCase();
+      if (
+        txt === 'bỏ qua giới thiệu' ||
+        txt === 'bỏ qua intro' ||
+        txt === 'skip intro' ||
+        txt.indexOf('bỏ qua giới thiệu') !== -1 ||
+        txt.indexOf('bỏ qua intro') !== -1
+      ) {
+        el.style.setProperty('display', 'none', 'important');
+        el.style.setProperty('opacity', '0', 'important');
+        el.style.setProperty('visibility', 'hidden', 'important');
+        el.style.setProperty('pointer-events', 'none', 'important');
+        if (el.parentNode) {
+          try { el.parentNode.removeChild(el); } catch(e) {}
+        }
+      }
     });
   }
-  setInterval(purgeBadOverlays, 800);
+  setInterval(purgeBadOverlays, 400);
   purgeBadOverlays();
 
   // Safely notify React Native when user clicks fullscreen button in web player
@@ -105,6 +156,84 @@ const INJECTED_JAVASCRIPT = `
       window.ReactNativeWebView.postMessage(JSON.stringify(msg));
     }
   }
+
+  // 2. Track timeline / controls visibility in fullscreen mode
+  var lastControlsVisible = true;
+  var lastTouchTime = Date.now();
+
+  function checkTimelineVisibility() {
+    var isVisible = false;
+
+    // Check JWPlayer
+    var jw = document.querySelector('.jwplayer');
+    if (jw) {
+      var isInactive = jw.classList.contains('jw-flag-user-inactive') || 
+                       jw.classList.contains('jw-flag-controls-hidden');
+      var cb = jw.querySelector('.jw-controlbar');
+      if (cb) {
+        var cStyle = window.getComputedStyle(cb);
+        var op = parseFloat(cStyle.opacity || '1');
+        isVisible = !isInactive && cStyle.display !== 'none' && cStyle.visibility !== 'hidden' && op > 0.05;
+      } else {
+        isVisible = !isInactive;
+      }
+    } else {
+      // Check Artplayer
+      var art = document.querySelector('.art-video-player');
+      if (art) {
+        var artBottom = art.querySelector('.art-bottom');
+        if (artBottom) {
+          var bs = window.getComputedStyle(artBottom);
+          isVisible = bs.display !== 'none' && bs.visibility !== 'hidden' && parseFloat(bs.opacity || '1') > 0.05;
+        } else {
+          isVisible = art.classList.contains('art-control-show');
+        }
+      } else {
+        // Generic player control bars
+        var bars = document.querySelectorAll(
+          '.jw-controlbar, .art-bottom, .art-controls, .dplayer-controller, .vjs-control-bar, [class*="controlbar"], [class*="control-bar"], [class*="bottom-control"], [class*="progress-bar"]'
+        );
+        if (bars.length > 0) {
+          for (var i = 0; i < bars.length; i++) {
+            var s = window.getComputedStyle(bars[i]);
+            if (s.display !== 'none' && s.visibility !== 'hidden' && parseFloat(s.opacity || '1') > 0.05) {
+              isVisible = true;
+              break;
+            }
+          }
+        } else {
+          // Fallback based on touch activity timeout (3.5s auto-hide)
+          isVisible = (Date.now() - lastTouchTime) < 3500;
+        }
+      }
+    }
+
+    if (isVisible !== lastControlsVisible) {
+      lastControlsVisible = isVisible;
+      sendToNative({
+        type: 'controlsVisibility',
+        visible: isVisible
+      });
+    }
+  }
+
+  function handleUserTouch() {
+    lastTouchTime = Date.now();
+    if (!lastControlsVisible) {
+      lastControlsVisible = true;
+      sendToNative({
+        type: 'controlsVisibility',
+        visible: true
+      });
+    }
+  }
+
+  window.addEventListener('touchstart', handleUserTouch, { capture: true, passive: true });
+  window.addEventListener('touchend', handleUserTouch, { capture: true, passive: true });
+  window.addEventListener('click', handleUserTouch, { capture: true, passive: true });
+  window.addEventListener('pointerdown', handleUserTouch, { capture: true, passive: true });
+
+  setInterval(checkTimelineVisibility, 300);
 
   function getFullscreenAction(target) {
     if (!target) return null;
@@ -214,6 +343,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [loading, setLoading] = useState(true);
   const [key, setKey] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isControlsVisible, setIsControlsVisible] = useState(true);
   const isFullscreenRef = useRef(false);
   const transitionLockRef = useRef(0);
   const webViewRef = useRef<WebView>(null);
@@ -229,6 +359,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     transitionLockRef.current = now;
     isFullscreenRef.current = true;
     setIsFullscreen(true);
+    setIsControlsVisible(true);
     onFullscreenChange?.(true);
 
     try {
@@ -256,6 +387,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     transitionLockRef.current = now;
     isFullscreenRef.current = false;
     setIsFullscreen(false);
+    setIsControlsVisible(true);
     onFullscreenChange?.(false);
 
     try {
@@ -294,6 +426,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           exitFullscreen();
         } else if (data.type === 'toggleFullscreen') {
           toggleFullscreen();
+        } else if (data.type === 'controlsVisibility') {
+          setIsControlsVisible(Boolean(data.visible));
         } else if (data.type === 'timeUpdate') {
           onTimeUpdate?.(data.position, data.duration);
         }
@@ -403,7 +537,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         )}
 
         {/* Fullscreen Overlay Controls (when in fullscreen landscape) */}
-        {isFullscreen && (
+        {isFullscreen && isControlsVisible && (
           <View style={styles.fullscreenTopBar} pointerEvents="box-none">
             <TouchableOpacity
               style={styles.fullscreenExitBtn}
@@ -564,7 +698,7 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     zIndex: 99999,
   },
