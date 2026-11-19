@@ -1,11 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 import { WatchProgressItem } from "../types/userHistory";
 
-// Direct in-code configuration (no .env required)
-export const SUPABASE_URL = "https://pqqimfaplmdhdmpkkmlq.supabase.co";
+// Direct in-code configuration or via environment variables
+export const SUPABASE_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://pqqimfaplmdhdmpkkmlq.supabase.co";
 
 // Supabase publishable public key
-export const SUPABASE_ANON_KEY = "sb_publishable_Z4kNx9ioc5O9Zx2P5RCFtg_issOhHzE";
+export const SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_Z4kNx9ioc5O9Zx2P5RCFtg_issOhHzE";
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
