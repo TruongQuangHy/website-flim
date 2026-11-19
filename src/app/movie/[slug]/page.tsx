@@ -96,12 +96,33 @@ export default function MoviePage({ params }: MoviePageProps) {
         setMovieDetails(item);
         setCdnImage(cdn);
 
-        // Pick episode: Check if user Hai Yen has history for this movie
-        const storeState = useUserHistoryStore.getState();
-        const movieHistory = storeState.user?.isLoggedIn ? storeState.history[slug] : null;
+        // Pick episode: Check URL query/hash first, then history
         let targetEpisode: VsmovEpisodeItem | undefined;
 
-        if (movieHistory?.lastEpisodeSlug && item.episodes?.length) {
+        if (typeof window !== "undefined") {
+          const urlParams = new URLSearchParams(window.location.search);
+          const reqEp = urlParams.get("ep") || window.location.hash.replace(/^#/, "");
+          if (reqEp && item.episodes?.length) {
+            const cleanReq = reqEp.toLowerCase();
+            for (const srv of item.episodes) {
+              const found = srv.server_data?.find(
+                (ep) =>
+                  ep.slug.toLowerCase() === cleanReq ||
+                  ep.slug.toLowerCase().includes(cleanReq)
+              );
+              if (found) {
+                targetEpisode = found;
+                break;
+              }
+            }
+          }
+        }
+
+        // Check if user Hai Yen has history for this movie
+        const storeState = useUserHistoryStore.getState();
+        const movieHistory = storeState.user?.isLoggedIn ? storeState.history[slug] : null;
+
+        if (!targetEpisode && movieHistory?.lastEpisodeSlug && item.episodes?.length) {
           for (const srv of item.episodes) {
             const found = srv.server_data?.find(
               (ep) => ep.slug === movieHistory.lastEpisodeSlug

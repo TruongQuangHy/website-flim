@@ -151,13 +151,19 @@ export const CUSTOM_MOVIES: CustomMovieEntry[] = [
   {
     aliases: [
       "dau-tay-ngot-ngao",
+      "dau-tay-ngot-ngao-phan-1",
       "dau-tay-ngot-ngao-tap-1-394644",
       "dau-tay-ngot-ngao‐tap-1-394644",
       "dau-tay-ngot-ngao-22934",
+      "dau-tay-ngot-ngao-phan-1/tap-1-sv-1",
+      "dau-tay-ngot-ngao-phan-1/tap-1-sv-0",
+      "tap-1-sv-1",
+      "tap-1-sv-0",
       "merry-berry-love",
       "tinh-yeu-qua-mong",
       "chuyen-tinh-mua-dau",
-      "dau-tay-ngot-ngao-phan-1",
+      "motchillv.show",
+      "motchill",
     ],
     movie: {
       _id: "305551",
@@ -346,49 +352,96 @@ export const CUSTOM_MOVIES: CustomMovieEntry[] = [
           ],
         },
         {
-          server_name: "VIP Server 3 (Thuyết Minh)",
+          server_name: "VIP Server 3 (Motchill - Thuyết Minh)",
           server_data: [
             {
               name: "Tập 1",
-              slug: "tm-tap-1",
-              filename: "dau-tay-ngot-ngao-tm-1",
+              slug: "tap-1-sv-1",
+              filename: "dau-tay-ngot-ngao-tap-1-sv-1",
               link_embed:
                 "https://embed14.streamc.xyz/embed.php?hash=21618c0505783831b7fd022c94801fb6",
             },
             {
               name: "Tập 2",
-              slug: "tm-tap-2",
-              filename: "dau-tay-ngot-ngao-tm-2",
+              slug: "tap-2-sv-1",
+              filename: "dau-tay-ngot-ngao-tap-2-sv-1",
               link_embed:
                 "https://embed18.streamc.xyz/embed.php?hash=c115208e0b76406641f206b83872d57a",
             },
             {
               name: "Tập 3",
-              slug: "tm-tap-3",
-              filename: "dau-tay-ngot-ngao-tm-3",
+              slug: "tap-3-sv-1",
+              filename: "dau-tay-ngot-ngao-tap-3-sv-1",
               link_embed:
                 "https://embed13.streamc.xyz/embed.php?hash=955acd13d2446098f5227baa4cef95a3",
             },
             {
               name: "Tập 4",
-              slug: "tm-tap-4",
-              filename: "dau-tay-ngot-ngao-tm-4",
+              slug: "tap-4-sv-1",
+              filename: "dau-tay-ngot-ngao-tap-4-sv-1",
               link_embed:
                 "https://embed14.streamc.xyz/embed.php?hash=815863c69580aaea253be2c17102bdce",
             },
             {
               name: "Tập 5",
-              slug: "tm-tap-5",
-              filename: "dau-tay-ngot-ngao-tm-5",
+              slug: "tap-5-sv-1",
+              filename: "dau-tay-ngot-ngao-tap-5-sv-1",
               link_embed:
                 "https://embed10.streamc.xyz/embed.php?hash=3053bc4f5e1ffeee1fe39327e1fbdeb3",
             },
             {
               name: "Tập 6",
-              slug: "tm-tap-6",
-              filename: "dau-tay-ngot-ngao-tm-6",
+              slug: "tap-6-sv-1",
+              filename: "dau-tay-ngot-ngao-tap-6-sv-1",
               link_embed:
                 "https://embed1.streamc.xyz/embed.php?hash=a0b509c418a001cf47dc1b9345b55d1b",
+            },
+          ],
+        },
+        {
+          server_name: "VIP Server 4 (Motchill / Nguồn C - Vietsub)",
+          server_data: [
+            {
+              name: "Tập 1",
+              slug: "tap-1-sv-0",
+              filename: "dau-tay-ngot-ngao-tap-1-sv-0",
+              link_embed:
+                "https://embed1.streamc.xyz/embed.php?hash=31004ce84ff8b9b554ccae928817320a",
+            },
+            {
+              name: "Tập 2",
+              slug: "tap-2-sv-0",
+              filename: "dau-tay-ngot-ngao-tap-2-sv-0",
+              link_embed:
+                "https://embed10.streamc.xyz/embed.php?hash=9886b3d8cea25712f404cc4860cf6e2c",
+            },
+            {
+              name: "Tập 3",
+              slug: "tap-3-sv-0",
+              filename: "dau-tay-ngot-ngao-tap-3-sv-0",
+              link_embed:
+                "https://embed1.streamc.xyz/embed.php?hash=606bfcba72cba30e43c54d47b3d7044d",
+            },
+            {
+              name: "Tập 4",
+              slug: "tap-4-sv-0",
+              filename: "dau-tay-ngot-ngao-tap-4-sv-0",
+              link_embed:
+                "https://embed2.streamc.xyz/embed.php?hash=7eb324beded70df57e9f089644f8edbb",
+            },
+            {
+              name: "Tập 5",
+              slug: "tap-5-sv-0",
+              filename: "dau-tay-ngot-ngao-tap-5-sv-0",
+              link_embed:
+                "https://embed13.streamc.xyz/embed.php?hash=e85b69928d690408d1a9815365465a52",
+            },
+            {
+              name: "Tập 6",
+              slug: "tap-6-sv-0",
+              filename: "dau-tay-ngot-ngao-tap-6-sv-0",
+              link_embed:
+                "https://embed14.streamc.xyz/embed.php?hash=e40ae4f22b6bd8af5771c1e4888e145d",
             },
           ],
         },
@@ -480,11 +533,22 @@ export const CUSTOM_MOVIES: CustomMovieEntry[] = [
 ];
 
 export function findCustomMovieBySlug(slug: string): VsmovMovieItem | undefined {
-  const clean = slug.toLowerCase().trim();
+  const clean = slug
+    .toLowerCase()
+    .trim()
+    .replace(/^https?:\/\/[^\/]+\/(phim|movie)\//i, "")
+    .replace(/\.html$/i, "");
   const entry = CUSTOM_MOVIES.find(
     (e) =>
       e.movie.slug.toLowerCase() === clean ||
-      e.aliases.some((alias) => alias.toLowerCase() === clean)
+      e.aliases.some((alias) => {
+        const al = alias.toLowerCase();
+        return (
+          al === clean ||
+          (al.length >= 8 && clean.includes(al)) ||
+          (clean.length >= 8 && al.includes(clean))
+        );
+      })
   );
   return entry ? { ...entry.movie } : undefined;
 }
